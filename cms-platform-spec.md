@@ -718,6 +718,9 @@ Builds the core decided in Phase 5, each through the platform extension points s
 
 ### Phase 8 — Setup and operations ☐
 - ☐ New-site script (section 10), platform update script (merge tag, migrate staging, check), launch checklist, offboarding export.
+- ☐ `npm run platform:update -- <tag>`: merges the platform tag, then restores the site's own `src/site/` and `migrations/site/` (`git restore --source=HEAD --staged --worktree`), so the platform repo's fixture site never overwrites a client's site.
+- ☐ Client-repo CI guard: fails any change outside `src/site/` and `migrations/site/` unless it's a platform merge; each site records its `PLATFORM_VERSION`.
+- ☐ Section field renames are content changes: a backup and a script that copies values to the new field names (removed sections and templates already fall back safely).
 - ☐ Content sync tools (section 2 → Environments and content flow): `content:launch` (staging → production, once; needed first in Phase 7) and `content:pull` (production → staging or local). Content and media only, never users, sessions or (by default) comments; always back up the target first.
 - ☐ Cron jobs: daily database backup to the MCJames backup bucket; resolved-comment clean-up.
 - ☐ Analytics dashboard in the Studio (if not in the Phase 5 core).
