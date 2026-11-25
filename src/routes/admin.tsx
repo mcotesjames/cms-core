@@ -1,7 +1,8 @@
 import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/SiteChrome";
-import { AdminGate, adminHead, useSignOut } from "@/components/admin/AdminGate";
+import { AdminGate } from "@/components/admin/AdminGate";
+import { adminHead, useSignOut } from "@/components/admin/adminUser";
 import { useComments, useProfiles } from "@/components/admin/useComments";
 
 export const Route = createFileRoute("/admin")({

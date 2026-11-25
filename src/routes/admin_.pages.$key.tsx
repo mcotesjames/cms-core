@@ -1,5 +1,6 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
-import { AdminGate, adminHead } from "@/components/admin/AdminGate";
+import { AdminGate } from "@/components/admin/AdminGate";
+import { adminHead } from "@/components/admin/adminUser";
 import { PageCanvas } from "@/components/admin/PageCanvas";
 import { isPageKey, type PageKey } from "@/lib/page-sections";
 import { commentSearch } from "@/lib/comments";

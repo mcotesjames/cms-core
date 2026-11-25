@@ -40,9 +40,15 @@ export const saveSiteRow = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const { d, siteContent, nowIso } = await load();
-    const set: Partial<typeof siteContent.$inferInsert> = { updatedAt: nowIso() };
-    if (data.content !== undefined) set.data = data.content as JsonObject;
+    // `updated_at` records when the live content last changed (the edge cache keys on it), so
+    // draft-only saves leave it alone.
+    const set: Partial<typeof siteContent.$inferInsert> = {};
+    if (data.content !== undefined) {
+      set.data = data.content as JsonObject;
+      set.updatedAt = nowIso();
+    }
     if (data.draft !== undefined) set.draft = (data.draft ?? null) as JsonObject | null;
+    if (Object.keys(set).length === 0) return { ok: true };
     await d
       .insert(siteContent)
       .values({ key: data.key, data: {}, ...set })

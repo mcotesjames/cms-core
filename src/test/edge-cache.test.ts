@@ -1,0 +1,36 @@
+import { describe, expect, it } from "vitest";
+import { cacheKind } from "@/data/cache.server";
+import { buildRobots } from "@/lib/sitemap";
+import { SITE_URL } from "@/lib/seo";
+
+const get = (path: string, method = "GET") => new Request(`https://example.com${path}`, { method });
+
+describe("edge cache", () => {
+  it("caches public pages, the sitemap and robots", () => {
+    for (const path of ["/", "/about", "/sitemap.xml", "/robots.txt", "/about?utm_source=x"])
+      expect(cacheKind(get(path))).toBe("page");
+  });
+
+  it("caches media by address", () => {
+    expect(cacheKind(get("/media/library/1-photo.webp"))).toBe("media");
+  });
+
+  it("never caches the Studio, server functions, the canvas or non-GET requests", () => {
+    for (const path of ["/admin", "/admin/pages", "/_serverFn/abc", "/studio", "/?studio=1"])
+      expect(cacheKind(get(path))).toBeNull();
+    expect(cacheKind(get("/", "POST"))).toBeNull();
+  });
+
+  it("doesn't treat pages that merely start with a private word as private", () => {
+    expect(cacheKind(get("/administration"))).toBe("page");
+  });
+});
+
+describe("robots.txt", () => {
+  it("keeps crawlers out of the Studio and points at the sitemap", () => {
+    const robots = buildRobots();
+    expect(robots).toContain("Disallow: /admin");
+    expect(robots).toContain("Disallow: /_serverFn");
+    expect(robots).toContain(`Sitemap: ${SITE_URL}/sitemap.xml`);
+  });
+});

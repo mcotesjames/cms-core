@@ -62,9 +62,10 @@ A site's code can only reach its own bindings, so client data is separated by in
 - Functions run server-side only (TanStack server functions). No database credentials or bindings ever reach the browser.
 
 ### Rendering
-- **Public pages render on the Worker** from live columns in D1, and the HTML is stored in Cloudflare's edge cache (Cache API, keyed by URL).
-- **Publish clears the cache** for the URLs it affects: the page or entry itself, plus every page that shows it (content feeds, record grids, menus). A change to something site-wide (menus, footer, settings) clears the whole site's cache. Publishing is live within seconds; there is no rebuild and no deploy hook.
-- **Settings saves that go live straight away** clear the cache the same way.
+- **Public pages render on the Worker** from live columns in D1, and the response is stored in Cloudflare's edge cache (Cache API) by `src/data/cache.server.ts`.
+- **Cached pages are keyed by a content version**, not purged: the key is the page's path plus the time live site content last changed (`site_content.updated_at`, written by Publish and Settings saves, never by draft autosaves). Any live change makes every data centre miss on its next request and render fresh, so publishing is live everywhere within seconds (the version is re-read at most every 2 seconds per Worker instance). *Why not purge: the Cache API is per data centre, so deleting entries only clears one; a global purge needs Cloudflare's purge API, a zone and a token per site.* Query strings are ignored for public pages.
+- **Never cached:** the Studio (`/admin`), server functions (`/_serverFn`) and the Studio canvas (`?studio=1`). Media (`/media/<key>`) is cached by address, since a key's file never changes.
+- **Browsers always revalidate pages** with the edge (`cache-control: public, max-age=0, must-revalidate`); media keeps a one-year immutable lifetime. Responses carry `x-edge-cache: HIT|MISS <version>` for diagnosis.
 - **The Studio and its canvas run on the same Worker** and read drafts through the data layer, never from the cache. Studio canvases render in the browser only (`?studio=1`, TanStack `ssr: "data-only"`) to avoid hydration mismatches when drafts arrive.
 - **Sitemap and robots** are server routes built from published content and cached like pages.
 
@@ -338,7 +339,7 @@ Every page and entry gets complete search and sharing tags from **one shared bui
 - **Where it's edited:** the **Settings** screen for each page or entry (from **Settings** in its list, or the link in the editor's empty panel). The visual editor holds no backend settings.
   - **Page settings:** page name, web address, search & sharing.
   - **Entry settings:** author, publish date (empty = first publish day), web address, search & sharing.
-- **Save goes live straight away** (clears the affected cache), with an "Unsaved changes" flag until then. It also writes into any open draft. For something not yet published, the toast says it goes live on first publish.
+- **Save goes live straight away** (it changes the content version, so cached pages refresh), with an "Unsaved changes" flag until then. It also writes into any open draft. For something not yet published, the toast says it goes live on first publish.
 - **Ownership:** Settings is the only writer of a page's `seo` and an entry's author, date, web address and `seo`. Publish keeps the live values of these.
 - **Search & sharing panel:** a Google-style preview; Search title, Description and Share image, each **Automatic** or **Custom · Reset**; counters that turn amber past Google's cut-off; **More** → Hide from search engines.
 - **Every field is optional; empty means automatic.** The placeholder shows the exact automatic value: built-in pages use their hand-written defaults from site config; created pages use their hero title and summary; entries use their title, standfirst and cover; the share image falls back to Settings → SEO.
@@ -618,7 +619,7 @@ Each phase leaves a site that works end to end, so every step can be checked aga
 - ✅ Copy the original codebase into a **new** platform repo, cut off from the original project (its repo, Lovable project, Supabase database and Worker are never touched); remove its `.env`, Supabase and Lovable files, build output, migrations, name, logo, copy, people and addresses.
 - ✅ Fix formatting and remove unused packages; an npm lockfile replaces the builder's private-mirror one. Remaining lint items are tracked under Phase 1.
 
-### Phase 1 — Data layer on D1 + R2 ◐ *(merged with the original Phase 2)*
+### Phase 1 — Data layer on D1 + R2 ✅ *(merged with the original Phase 2)*
 *The repo has no Supabase project (the only one it ever pointed at is the original client's live database), so the data layer went straight onto local D1 and R2.*
 - ✅ Wrangler config with D1 and R2 bindings; local dev on a local D1 database and R2 bucket (`npm run db:reset` seeds `db/seed.sql`, fixtures only).
 - ✅ Drizzle schema (section 2) with committed SQL migrations, including the generic `entries`, `records` and `list_items` tables (unused until Phase 6).
@@ -626,10 +627,10 @@ Each phase leaves a site that works end to end, so every step can be checked aga
 - ✅ Everything the skeleton uses runs on `src/data/` and was clicked through on local D1/R2: public pages and sitemap; sign-in placeholder, approval and users; page editing, sections, menus and publish; page creation and settings; media upload and library; comments.
 - ✅ Browser-side image resize; stable R2 media paths (`/media/<key>`).
 - ✅ Deleted the Supabase client and package.
-- ☐ Test the built Worker under `wrangler dev` (the production bundle, not the Vite dev server).
-- ☐ Worker rendering with the edge cache, and cache clearing on Publish and Settings saves; `robots.txt` as a server route.
-- ☐ Replace the builder's Vite preset (`@lovable.dev/vite-tanstack-config`) with a plain TanStack Start + Nitro config.
-- ◐ Lint: 5 `any` types and 9 warnings left (Studio form and editor code; Fast Refresh warnings in UI components).
+- ✅ Test the built Worker under `wrangler dev` (the production bundle, not the Vite dev server): pages, sitemap, robots and media served from local D1/R2; the Studio closed (no dev sign-in in a build).
+- ✅ Worker rendering with the edge cache, invalidated by a content version instead of purging (section 2 → Rendering); checked on the built Worker: hit, still a hit after a draft save, miss with the new content after a publish. `robots.txt` as a server route built from `SITE_URL`.
+- ✅ Replaced the builder's Vite preset with a plain `vite.config.ts` (TanStack Start, React, Tailwind, tsconfig paths, LightningCSS; Nitro's `cloudflare-module` preset for builds).
+- ✅ Lint clean: no errors or warnings (shadcn `ui/` files exempt from the Fast Refresh rule by design).
 
 ### Phase 2 — First deployment ☐
 Proves the stack on Cloudflare itself before anything else is built on it. Done by hand; Phase 8 scripts it.
@@ -841,6 +842,8 @@ Still unchecked in the browser, for when entries return: replacing an image; add
 ## 17. Change Log
 
 Newest first. Each entry: date, what changed, how, and any follow-ups.
+
+- **2026-11-25 · Phase 1 finished · Claude** — Replaced the Lovable Vite preset with a plain `vite.config.ts` (and removed the package). Tested the built Worker under `wrangler dev`: pages, sitemap, robots and media from local D1/R2, Studio closed. Added the edge cache (`src/data/cache.server.ts`, wired in `src/server.ts`): public pages keyed by a content version (`site_content.updated_at`, now written only when live content changes), media by address, Studio / server functions / canvas never cached, browsers always revalidate pages; verified hit → still a hit after a draft save → miss with new content after a publish. The spec's purge-on-publish plan changed to version keys, because the Cache API is per data centre (section 2 → Rendering). `robots.txt` is a server route from `SITE_URL`. Lint clean: the remaining `any` types typed through the page model's `Doc`, hook dependencies made explicit, Studio helpers (`meQuery`, `useSignOut`, `adminHead`) moved from `AdminGate.tsx` to `adminUser.ts`. 79 tests (5 new: cacheable requests, robots). Follow-ups: lazy images take no space until loaded (store image dimensions with Image sections); a real deployment is Phase 2.
 
 - **2026-11-25 · Roadmap rewritten · Claude** — Docs only. New order: finish Phase 1 (built-Worker test, edge cache, plain Vite config, lint) → Phase 2 First deployment (staging by hand, reusing the merged phase's number) → Phase 3 Auth → Phase 4 platform/site split → **Phase 5 Core scope** (a decision phase: which content types, record types, sections and Studio features ship with every site, with a candidate list and criteria; pages alone aren't enough) → Phase 6 Core features (rebuilding entries, records and list items on the platform, with the original build's code in commit `5b54fbe` as the starting point) → Phase 7 Portfolio → Phase 8 Setup and operations (now including backups, error monitoring and the analytics dashboard) → Phase 9 Editor polish and drag and drop. Stale items from the skeleton cut removed (record and article gaps, the shader motion item, the already-deleted error-reporting hook); the feature inventory now separates what's in the code from what's restorable from git history. Open decisions: 2–4 tied to the entry editor's return, 6 points at Phase 1 / Phase 9, new decision 7 (core scope).
 

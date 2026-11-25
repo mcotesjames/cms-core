@@ -32,3 +32,17 @@ export function buildSitemap(rows: SitemapPageRow[]): string {
     `\n</urlset>\n`
   );
 }
+
+/** robots.txt: everything public is crawlable; the Studio and server functions aren't. */
+export function buildRobots(): string {
+  return [
+    "User-agent: *",
+    "Allow: /",
+    "Disallow: /admin",
+    "Disallow: /studio",
+    "Disallow: /_serverFn",
+    "",
+    `Sitemap: ${SITE_URL}/sitemap.xml`,
+    "",
+  ].join("\n");
+}

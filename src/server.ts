@@ -48,8 +48,13 @@ export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
       const handler = await getServerEntry();
-      const response = await handler.fetch(request, env, ctx);
-      return await normalizeCatastrophicSsrResponse(response);
+      const render = async () =>
+        normalizeCatastrophicSsrResponse(await handler.fetch(request, env, ctx));
+      // Deployed Workers serve public pages and media through the edge cache (no Cache API in
+      // `vite dev`, where every request renders).
+      if (import.meta.env.DEV) return await render();
+      const { withEdgeCache } = await import("./data/cache.server");
+      return await withEdgeCache(request, ctx, render);
     } catch (error) {
       console.error(error);
       return new Response(renderErrorPage(), {

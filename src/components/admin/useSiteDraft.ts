@@ -4,7 +4,7 @@ import { discardSiteDraft, publishSiteRow } from "@/data/site";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-type Doc = Record<string, any>;
+import type { Doc } from "@/lib/page-sections";
 export type SaveState = "idle" | "saving" | "saved" | "error";
 
 /** Edits a site_content row through its draft; publishing copies the draft to the live content. */
@@ -87,8 +87,11 @@ export function useSiteDraft(key: string) {
   return { doc, update, publish, discard, hasDraft, save };
 }
 
-export function getPath(o: Doc, path: string): any {
-  return path.split(".").reduce((a, k) => (a == null ? a : a[k]), o);
+/** The value at a dotted path ("intro.title"), or undefined. */
+export function getPath(o: Doc, path: string): unknown {
+  return path
+    .split(".")
+    .reduce<unknown>((a, k) => (a != null && typeof a === "object" ? (a as Doc)[k] : undefined), o);
 }
 export function setPath(o: Doc, path: string, v: unknown): Doc {
   const [k, ...rest] = path.split(".");

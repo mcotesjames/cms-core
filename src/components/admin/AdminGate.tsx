@@ -1,26 +1,12 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SITE_NAME } from "@/lib/seo";
-import { devSignIn, getMe, setMyName } from "@/data/users";
+import { devSignIn, type getMe, setMyName } from "@/data/users";
 import { Logo } from "@/components/SiteChrome";
-import { AdminUserContext, type AdminUser } from "./adminUser";
-
-export const meQuery = queryOptions({ queryKey: ["admin", "me"], queryFn: () => getMe() });
-
-/** Signs out (dev placeholder) and returns to the sign-in screen. */
-export function useSignOut() {
-  const qc = useQueryClient();
-  return async () => {
-    await devSignIn({ data: { id: null } });
-    // Refetch who's signed in first (the gate swaps to the sign-in screen), then drop the
-    // previous user's Studio data so nothing of theirs is shown to the next one.
-    await qc.invalidateQueries({ queryKey: meQuery.queryKey });
-    qc.removeQueries({ predicate: (q) => q.queryKey[0] === "admin" && q.queryKey[1] !== "me" });
-  };
-}
+import { AdminUserContext, meQuery, useSignOut, type AdminUser } from "./adminUser";
 
 /**
  * Sign-in placeholder until Better Auth (spec Phase 3). In `vite dev` you sign in as one of the
@@ -186,15 +172,3 @@ function AdminAccess({ children }: { children: ReactNode }) {
     return <NamePrompt onSaved={() => qc.invalidateQueries({ queryKey: meQuery.queryKey })} />;
   return <AdminUserContext.Provider value={value}>{children}</AdminUserContext.Provider>;
 }
-
-export const adminHead = (title: string) => ({
-  meta: [
-    { title: `${title} — Content Studio` },
-    { name: "description", content: `${SITE_NAME} content administration.` },
-    { property: "og:title", content: `${title} — Content Studio` },
-    { property: "og:description", content: `${SITE_NAME} content administration.` },
-    { property: "og:type", content: "website" },
-    { name: "twitter:card", content: "summary" },
-    { name: "robots", content: "noindex" },
-  ],
-});

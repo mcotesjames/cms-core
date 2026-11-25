@@ -154,7 +154,7 @@ export function PageCanvas({
       content: { [key]: pageDraft.doc, settings: settingsDraft.doc, menus: menusDraft.doc },
     });
   };
-  useEffect(send, [pageDraft.doc, settingsDraft.doc, menusDraft.doc]);
+  useEffect(send, [key, pageDraft.doc, settingsDraft.doc, menusDraft.doc]);
   useEffect(() => {
     toFrame({ type: "studio-selected", section: selected, item, scroll: scrollNext.current });
     scrollNext.current = false;
@@ -200,7 +200,7 @@ export function PageCanvas({
     const f = parseField(field);
     const d = f && drafts[f.key];
     if (!f || !d?.doc) return;
-    if ((getPath(d.doc, f.path) ?? "") !== value) d.update(setPath(d.doc, f.path, value));
+    if (String(getPath(d.doc, f.path) ?? "") !== value) d.update(setPath(d.doc, f.path, value));
   };
 
   const addSection = (type: SectionType) => {

@@ -80,9 +80,12 @@ export function useCanvasComments({
         }
       : null,
   };
+  // Re-sent whenever what it says changes (compared as JSON: the object is rebuilt every render).
   const key = JSON.stringify(message);
   const sync = () => frame.current?.contentWindow?.postMessage(message, window.location.origin);
-  useEffect(sync, [key]);
+  useEffect(() => {
+    frame.current?.contentWindow?.postMessage(JSON.parse(key), window.location.origin);
+  }, [frame, key]);
   // Stop asking after a while if the element never appears (e.g. it was removed).
   useEffect(() => {
     if (!scrollTo) return;

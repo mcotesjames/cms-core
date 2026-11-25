@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { uploadMedia } from "@/lib/media";
 import { getPath, setPath, useSiteDraft } from "./useSiteDraft";
+import type { Doc } from "@/lib/page-sections";
 
 export type DraftField = { path: string; label: string; type?: "text" | "textarea" | "image" };
 export type DraftSection = { title: string; fields: DraftField[]; note?: string };
@@ -25,8 +26,8 @@ function ImageField({ value, onChange }: { value: string; onChange: (v: string) 
           setBusy(true);
           try {
             onChange(await uploadMedia(f));
-          } catch (err: any) {
-            toast.error(err.message);
+          } catch (err) {
+            toast.error((err as Error).message);
           } finally {
             setBusy(false);
           }
@@ -83,9 +84,7 @@ export function DraftForm({
   contentKey: string;
   title: string;
   sections: DraftSection[];
-  extra?:
-    | ((doc: Record<string, any>, update: (d: Record<string, any>) => void) => React.ReactNode)
-    | undefined;
+  extra?: ((doc: Doc, update: (d: Doc) => void) => React.ReactNode) | undefined;
 }) {
   const { doc, update, publish, discard, hasDraft, save } = useSiteDraft(contentKey);
   if (!doc) return <p className="text-muted-foreground">Loading…</p>;
@@ -101,7 +100,7 @@ export function DraftForm({
           <h2 className="text-lg">{s.title}</h2>
           {s.note && <p className="text-sm text-muted-foreground">{s.note}</p>}
           {s.fields.map((f) => {
-            const v = getPath(doc, f.path) ?? "";
+            const v = String(getPath(doc, f.path) ?? "");
             const set = (nv: string) => update(setPath(doc, f.path, nv));
             return (
               <label key={f.path} className="block space-y-2">

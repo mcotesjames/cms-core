@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { fetchSiteRows, saveSiteRow } from "@/lib/admin-drafts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -36,7 +36,7 @@ function PageSettings() {
   const [seo, setSeo] = useState<SeoFields>({});
   const [busy, setBusy] = useState(false);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     let data: { content: unknown; draft: unknown } | undefined;
     try {
       data = (await fetchSiteRows(key))[0];
@@ -50,16 +50,18 @@ function PageSettings() {
     };
     setRow(r);
     setSeo(readSeoFields((r.draft ?? r.content)["seo"]));
-  };
-  useEffect(() => {
-    void load();
   }, [key]);
   useEffect(() => {
-    if (page) {
-      setTitle(page.title);
-      setSlug(page.path.slice(1));
-    }
-  }, [page?.title, page?.path]);
+    void load();
+  }, [load]);
+  // The form follows the page's saved name and address (e.g. after saving).
+  const savedTitle = page?.title;
+  const savedPath = page?.path;
+  useEffect(() => {
+    if (savedTitle === undefined || savedPath === undefined) return;
+    setTitle(savedTitle);
+    setSlug(savedPath.slice(1));
+  }, [savedTitle, savedPath]);
 
   if (!pages.ready || !row) return <p className="text-muted-foreground">Loading…</p>;
   if (!page)

@@ -22,6 +22,7 @@ export const siteContent = sqliteTable("site_content", {
     .notNull()
     .default(sql`'{}'`),
   draft: json<JsonObject>("draft"),
+  /** When the live content last changed (never on draft-only saves): the edge cache's version. */
   updatedAt: text("updated_at").notNull().default(now),
 });
 
