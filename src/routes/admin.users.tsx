@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { approveUser, removeUserAccess } from "@/data/users";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { profilesQuery, useProfiles } from "@/components/admin/useComments";
@@ -19,19 +19,21 @@ function Users() {
   const approved = list.filter((p) => p.approved);
   const refresh = () => qc.invalidateQueries({ queryKey: profilesQuery.queryKey });
   const approve = async (id: string) => {
-    const { error } = await supabase.from("user_roles").insert({ user_id: id, role: "admin" });
-    if (error) toast.error(error.message);
-    else toast.success("Approved — they can now use the Content Studio");
+    try {
+      await approveUser({ data: { id } });
+      toast.success("Approved — they can now use the Content Studio");
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
     refresh();
   };
   const removeAccess = async (id: string, name: string) => {
     if (!confirm(`Remove ${name}'s access to the Content Studio? Their comments stay.`)) return;
-    const { error } = await supabase
-      .from("user_roles")
-      .delete()
-      .eq("user_id", id)
-      .eq("role", "admin");
-    if (error) toast.error(error.message);
+    try {
+      await removeUserAccess({ data: { id } });
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
     refresh();
   };
   const Row = ({ p, children }: { p: (typeof list)[number]; children?: React.ReactNode }) => (

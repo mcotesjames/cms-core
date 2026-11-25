@@ -1,12 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  currentList,
-  moveItem,
-  newItem,
-  parseItem,
-  placeInBox,
-  planPublish,
-} from "@/lib/list-drafts";
+import { currentList, moveItem, newItem, parseItem, placeInBox } from "@/lib/list-drafts";
 
 const live = [
   { id: "a", title: "Strategy", sort: 1 },
@@ -34,19 +27,6 @@ describe("list drafts", () => {
   it("moves an item and refuses moves past either end", () => {
     expect(moveItem(live, "b", -1)!.map((r) => r.id)).toEqual(["b", "a"]);
     expect(moveItem(live, "a", -1)).toBeNull();
-  });
-
-  it("publish writes the draft order and deletes only removed live rows", () => {
-    const draft = [
-      { id: "b", title: "Invest" },
-      { id: "n", title: "New" },
-    ];
-    const plan = planPublish(live, draft);
-    expect(plan.upserts.map((r) => [r.id, r.sort])).toEqual([
-      ["b", 1],
-      ["n", 2],
-    ]);
-    expect(plan.deletes).toEqual(["a"]);
   });
 
   it("reads item addresses", () => {

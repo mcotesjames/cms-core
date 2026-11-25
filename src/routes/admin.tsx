@@ -1,8 +1,7 @@
 import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/SiteChrome";
-import { AdminGate, adminHead } from "@/components/admin/AdminGate";
+import { AdminGate, adminHead, useSignOut } from "@/components/admin/AdminGate";
 import { useComments, useProfiles } from "@/components/admin/useComments";
 
 export const Route = createFileRoute("/admin")({
@@ -56,6 +55,7 @@ function Waiting() {
 }
 
 function AdminLayout() {
+  const signOut = useSignOut();
   return (
     <AdminGate>
       <div className="grid min-h-screen md:grid-cols-[232px_1fr]">
@@ -94,7 +94,7 @@ function AdminLayout() {
             <Link to="/" className="block hover:text-primary">
               View site
             </Link>
-            <Button variant="outline" size="sm" onClick={() => supabase.auth.signOut()}>
+            <Button variant="outline" size="sm" onClick={signOut}>
               Sign out
             </Button>
           </div>

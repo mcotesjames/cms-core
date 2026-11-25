@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildSitemap, readSitemapRows } from "@/lib/sitemap";
+import { buildSitemap } from "@/lib/sitemap";
 
 describe("sitemap", () => {
   it("includes all four built-in pages and published created pages", () => {
@@ -64,30 +64,5 @@ describe("sitemap", () => {
     expect(
       buildSitemap([], [{ slug: "a&b", published: true, published_at: null, seo: null }]),
     ).toContain("/insights/a&amp;b</loc>");
-  });
-
-  it("paginates beyond one response so later published rows are included", async () => {
-    const source = Array.from({ length: 1001 }, (_, id) => ({ id }));
-    const ranges: number[][] = [];
-    const rows = await readSitemapRows(async (from, to) => {
-      ranges.push([from, to]);
-      return { data: source.slice(from, to + 1), error: null };
-    });
-    expect(rows).toEqual(source);
-    expect(ranges).toEqual([
-      [0, 499],
-      [500, 999],
-      [1000, 1499],
-    ]);
-  });
-
-  it("rejects a failed later page rather than returning a partial sitemap", async () => {
-    const error = new Error("Source unavailable");
-    await expect(
-      readSitemapRows(
-        async (from) => (from === 0 ? { data: [{ id: 1 }], error: null } : { data: null, error }),
-        1,
-      ),
-    ).rejects.toBe(error);
   });
 });

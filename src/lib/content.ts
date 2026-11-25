@@ -1,77 +1,111 @@
 import { queryOptions } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { getListItems, getPostBySlug, getPublishedPosts, getRecords } from "@/data/content";
+import type { Post, RecordItem } from "@/data/shapes";
 
 export type Accordion = { title: string; body: string };
 
+export type Pillar = {
+  id: string;
+  sort: number;
+  title: string;
+  tagline: string;
+  body: string;
+  image_url: string;
+  accordions: Accordion[];
+};
+export type StackCard = {
+  id: string;
+  sort: number;
+  title: string;
+  body: string;
+  image_url: string;
+};
+export type Hotspot = {
+  id: string;
+  sort: number;
+  label: string;
+  body: string;
+  items: string[];
+  link_url: string;
+  x: number;
+  y: number;
+};
+export type Investment = {
+  id: string;
+  name: string;
+  description: string;
+  sector: string;
+  stage: string;
+  logo_url: string;
+  website_url: string;
+  is_placeholder: boolean;
+};
+export type PublicationRow = {
+  id: string;
+  title: string;
+  kind: string;
+  year: string;
+  month: string | null;
+  outlet: string | null;
+  coauthors: string | null;
+  summary: string;
+  url: string;
+  pdf: string | null;
+  featured: boolean;
+  sort: number;
+  is_placeholder: boolean;
+};
+
+const str = (v: unknown) => (typeof v === "string" ? v : "");
+
+/** The section lists shown on pages (pillars, stacking cards, biography hotspots). */
 export const homeQuery = queryOptions({
   queryKey: ["home"],
   queryFn: async () => {
-    // Partners are no longer shown on the site; the data is kept but not read.
-    const [p, s, h] = await Promise.all([
-      supabase.from("pillars").select("*").order("sort"),
-      supabase.from("stack_cards").select("*").order("sort"),
-      supabase.from("hotspots").select("*").order("sort"),
-    ]);
-    const err = p.error || s.error || h.error;
-    if (err) throw err;
+    const lists = await getListItems();
     return {
-      pillars: p.data!.map((x) => ({ ...x, accordions: (x.accordions as Accordion[]) ?? [] })),
-      cards: s.data!,
-      hotspots: h.data!.map((x) => ({ ...x, items: (x.items as string[]) ?? [] })),
+      pillars: (lists["pillars"] ?? []).map((x) => ({
+        ...x,
+        accordions: (x["accordions"] as Accordion[]) ?? [],
+      })) as unknown as Pillar[],
+      cards: (lists["cards"] ?? []) as unknown as StackCard[],
+      hotspots: (lists["hotspots"] ?? []).map((x) => ({
+        ...x,
+        items: (x["items"] as string[]) ?? [],
+      })) as unknown as Hotspot[],
     };
   },
 });
 
-/** Every live post column except `draft`, which visitors can't read. */
-export const PUBLIC_POST_COLUMNS =
-  "id, slug, title, excerpt, body, cover_url, published, published_at, created_at, modules, author, seo";
-
 export const postsQuery = queryOptions({
   queryKey: ["posts"],
-  queryFn: async () => {
-    const { data, error } = await supabase
-      .from("posts")
-      .select(PUBLIC_POST_COLUMNS)
-      .eq("published", true)
-      .order("published_at", { ascending: false });
-    if (error) throw error;
-    return data;
-  },
+  queryFn: (): Promise<Post[]> => getPublishedPosts(),
 });
 
 export const investmentsQuery = queryOptions({
   queryKey: ["investments"],
   queryFn: async () => {
-    const { data, error } = await supabase.from("investments").select("*").order("name");
-    if (error) throw error;
-    return data ?? [];
+    const rows = await getRecords({ data: { table: "investments" } });
+    return (rows as unknown as Investment[]).sort((a, b) => str(a.name).localeCompare(str(b.name)));
   },
 });
 
+/** Newest first (year, then month), then by manual order. */
+export const sortPublications = (rows: RecordItem[]) =>
+  (rows as unknown as PublicationRow[]).sort(
+    (a, b) =>
+      str(b.year).localeCompare(str(a.year)) ||
+      str(b.month).localeCompare(str(a.month)) ||
+      (a.sort ?? 0) - (b.sort ?? 0),
+  );
+
 export const publicationsQuery = queryOptions({
   queryKey: ["publications"],
-  queryFn: async () => {
-    const { data, error } = await supabase
-      .from("publications")
-      .select("*")
-      .order("year", { ascending: false })
-      .order("month", { ascending: false })
-      .order("sort");
-    if (error) throw error;
-    return data ?? [];
-  },
+  queryFn: async () => sortPublications(await getRecords({ data: { table: "publications" } })),
 });
 
 export const postQuery = (slug: string) =>
   queryOptions({
     queryKey: ["post", slug],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("posts")
-        .select(PUBLIC_POST_COLUMNS)
-        .eq("slug", slug)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
-    },
+    queryFn: (): Promise<Post | null> => getPostBySlug({ data: { slug } }),
   });

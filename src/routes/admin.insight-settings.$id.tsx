@@ -1,9 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { fetchPostDrafts, ADMIN_POST_COLUMNS } from "@/lib/admin-drafts";
+import { getStudioPost, savePostSettings } from "@/data/entries";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -56,15 +55,15 @@ function InsightSettings() {
   const [busy, setBusy] = useState(false);
 
   const load = async () => {
-    const [{ data, error }, drafts] = await Promise.all([
-      supabase.from("posts").select(ADMIN_POST_COLUMNS).eq("id", id).single(),
-      fetchPostDrafts().catch(() => ({}) as Record<string, unknown>),
-    ]);
-    if (error) {
-      toast.error(error.message);
+    let p: Post;
+    try {
+      const found = await getStudioPost({ data: { id } });
+      if (!found) throw new Error("Insight not found");
+      p = found as unknown as Post;
+    } catch (e) {
+      toast.error((e as Error).message);
       return;
     }
-    const p = { ...data, draft: drafts[data.id] ?? null } as unknown as Post;
     setPost(p);
     setForm(formOf(p));
   };
@@ -97,22 +96,14 @@ function InsightSettings() {
       slug: form.slug,
       seo: readSeoFields(form.seo),
     };
-    const { error } = await supabase
-      .from("posts")
-      .update({
-        ...values,
-        ...(post.draft ? { draft: { ...post.draft, ...values } } : {}),
-      } as never)
-      .eq("id", id);
-    setBusy(false);
-    if (error) {
-      toast.error(
-        error.message.includes("duplicate")
-          ? "Another insight already uses this web address."
-          : error.message,
-      );
+    try {
+      await savePostSettings({ data: { id, ...values } });
+    } catch (e) {
+      setBusy(false);
+      toast.error((e as Error).message);
       return;
     }
+    setBusy(false);
     await qc.invalidateQueries();
     await load();
     toast.success(

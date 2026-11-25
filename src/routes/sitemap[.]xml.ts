@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { supabase } from "@/integrations/supabase/client";
-import { buildSitemap, readSitemapRows } from "@/lib/sitemap";
+import { getPublishedPosts, getSiteContent } from "@/data/content";
+import { buildSitemap } from "@/lib/sitemap";
 
 /**
  * /sitemap.xml, built from the live content on every request: the built-in pages, published
@@ -11,19 +11,10 @@ export const Route = createFileRoute("/sitemap.xml")({
     handlers: {
       GET: async () => {
         try {
-          const [rows, posts] = await Promise.all([
-            readSitemapRows((from, to) =>
-              supabase.from("site_content").select("key, content").order("key").range(from, to),
-            ),
-            readSitemapRows((from, to) =>
-              supabase
-                .from("posts")
-                .select("slug, published, published_at, seo")
-                .eq("published", true)
-                .order("id")
-                .range(from, to),
-            ),
-          ]);
+          const [site, posts] = await Promise.all([getSiteContent(), getPublishedPosts()]);
+          const rows = Object.entries(site)
+            .map(([key, content]) => ({ key, content }))
+            .sort((a, b) => a.key.localeCompare(b.key));
           return new Response(buildSitemap(rows, posts), {
             headers: {
               "content-type": "application/xml; charset=utf-8",

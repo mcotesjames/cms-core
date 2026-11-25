@@ -1,19 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  fetchSiteRows,
-  fetchPostDrafts,
-  ADMIN_POST_COLUMNS,
-  saveSiteRow,
-} from "@/lib/admin-drafts";
+import { fetchSiteRows, saveSiteRow } from "@/lib/admin-drafts";
+import { publishLists } from "@/data/site";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { homeQuery } from "@/lib/content";
 import {
   LIST_NAMES,
-  LISTS,
   currentList,
-  planPublish,
   type ListName,
   type ListRow,
   type ListsDraft,
@@ -24,7 +17,7 @@ const ROW = "lists";
 
 /**
  * Edits the shared lists (pillars, cards, hotspots) through a draft kept in the site_content
- * row "lists". Live items stay in their tables until publish().
+ * row "lists". Live items stay in list_items until publish().
  */
 export function useListDrafts() {
   const qc = useQueryClient();
@@ -78,27 +71,10 @@ export function useListDrafts() {
   const publish = async () => {
     if (!draft || !live) return true;
     clearTimeout(timer.current);
-    for (const name of Object.keys(draft) as ListName[]) {
-      const { table } = LISTS[name];
-      const { upserts, deletes } = planPublish(live[name] ?? [], draft[name] ?? []);
-      if (upserts.length) {
-        const { error } = await supabase.from(table).upsert(upserts as never, { onConflict: "id" });
-        if (error) {
-          toast.error(`${LISTS[name].title}: ${error.message}`);
-          return false;
-        }
-      }
-      if (deletes.length) {
-        const { error } = await supabase.from(table).delete().in("id", deletes);
-        if (error) {
-          toast.error(`${LISTS[name].title}: ${error.message}`);
-          return false;
-        }
-      }
-    }
-    const { error } = await saveSiteRow(ROW, { draft: null });
-    if (error) {
-      toast.error(error.message);
+    try {
+      await publishLists({ data: { lists: draft as Record<string, ListRow[]> } });
+    } catch (e) {
+      toast.error((e as Error).message);
       return false;
     }
     setDraft(null);

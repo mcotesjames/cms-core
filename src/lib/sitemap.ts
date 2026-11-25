@@ -9,22 +9,6 @@ export type SitemapPost = {
   seo: unknown;
 };
 
-/** Read every public row, without accepting a truncated or failed source. */
-export async function readSitemapRows<T>(
-  fetchPage: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>,
-  pageSize = 500,
-): Promise<T[]> {
-  if (!Number.isInteger(pageSize) || pageSize < 1) throw new Error("Invalid sitemap page size");
-  const rows: T[] = [];
-  for (let from = 0; ; from += pageSize) {
-    const result = await fetchPage(from, from + pageSize - 1);
-    if (result.error) throw result.error;
-    if (!result.data) throw new Error("Sitemap source returned no data");
-    rows.push(...result.data);
-    if (result.data.length < pageSize) return rows;
-  }
-}
-
 const xml = (value: string) =>
   value.replace(/[<>&'"]/g, (character) => {
     const entities: Record<string, string> = {

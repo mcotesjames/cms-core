@@ -7,7 +7,7 @@ An editorial, canvas-first CMS: editors change pages, entries and records direct
 
 ## Status
 
-Phase 0 of the roadmap (fork and tidy). The code still contains the original build's features as fixtures and its Supabase client, but no database is connected, so the site builds and its tests run without loading content. Phase 1 moves every data call behind `src/data/`; Phase 2 swaps the backend to Cloudflare D1 and R2.
+Phase 1 of the roadmap (data layer on Cloudflare D1 + R2). The site and Studio run locally on a local D1 database and R2 bucket, seeded with fixture content. Sign-in is a dev-only placeholder until Better Auth (Phase 3): in `npm run dev` you pick a seeded account at `/admin`.
 
 ## Development
 
@@ -15,8 +15,10 @@ You need Node.js and npm.
 
 ```sh
 npm i
-npm run dev      # vite dev server
+npm run db:reset # build the local D1 database and seed fixture content
+npm run dev      # vite dev server (local D1 + R2 through Wrangler)
 npm test         # vitest
 npm run lint     # eslint
-npm run build    # production build
+npm run build    # production build (Cloudflare Worker via Nitro)
+npm run db:generate  # after changing src/data/schema.ts: write a new migration
 ```

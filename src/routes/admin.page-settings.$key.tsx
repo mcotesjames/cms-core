@@ -1,14 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import {
-  fetchSiteRows,
-  fetchPostDrafts,
-  ADMIN_POST_COLUMNS,
-  saveSiteRow,
-} from "@/lib/admin-drafts";
+import { fetchSiteRows, saveSiteRow } from "@/lib/admin-drafts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";

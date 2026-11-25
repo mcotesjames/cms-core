@@ -1,7 +1,6 @@
 import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { saveSiteRow } from "@/lib/admin-drafts";
+import { fetchSiteRows, saveSiteRow } from "@/lib/admin-drafts";
 import { siteContentQuery } from "@/lib/site-content";
 import { newSectionId } from "@/lib/page-sections";
 import {
@@ -25,13 +24,8 @@ type Registry = { list: CustomPage[]; names: Record<string, string> };
 export const pagesQuery = queryOptions({
   queryKey: ["admin", "pages"],
   queryFn: async (): Promise<Registry> => {
-    const { data, error } = await supabase
-      .from("site_content")
-      .select("content")
-      .eq("key", "pages")
-      .maybeSingle();
-    if (error) throw error;
-    const site = { pages: data?.content };
+    const [row] = await fetchSiteRows("pages");
+    const site = { pages: row?.content };
     return { list: customPages(site), names: fixedPageNames(site) };
   },
 });
@@ -45,9 +39,7 @@ export function usePages() {
   const q = useQuery(pagesQuery);
   const reg: Registry = q.data ?? { list: [], names: {} };
   const save = async (next: Registry) => {
-    const { error } = await supabase
-      .from("site_content")
-      .upsert({ key: "pages", content: next as never }, { onConflict: "key" });
+    const { error } = await saveSiteRow("pages", { content: next });
     if (error) toast.error(error.message);
     await Promise.all([
       qc.invalidateQueries({ queryKey: pagesQuery.queryKey }),

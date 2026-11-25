@@ -1,9 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { fetchPostDrafts, ADMIN_POST_COLUMNS } from "@/lib/admin-drafts";
+import {
+  discardPostDraft,
+  getStudioPost,
+  publishPost,
+  savePostDraft,
+  unpublishPost,
+} from "@/data/entries";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -291,13 +296,9 @@ function Editor() {
   }, [comments.on]);
 
   useEffect(() => {
-    Promise.all([
-      supabase.from("posts").select(ADMIN_POST_COLUMNS).eq("id", id).single(),
-      fetchPostDrafts().catch(() => ({}) as Record<string, unknown>),
-    ]).then(([{ data, error }, drafts]) => {
-      const p = data && { ...data, draft: drafts[data.id] ?? null };
-      if (error || !p) {
-        toast.error(error?.message ?? "Insight not found");
+    getStudioPost({ data: { id } }).then((p) => {
+      if (!p) {
+        toast.error("Insight not found");
         return;
       }
       const base: PostDoc = {
@@ -308,9 +309,9 @@ function Editor() {
         author: p.author,
         published_at: p.published_at,
         modules: parseModules(p.modules),
-        seo: ((p as { seo?: unknown }).seo as SeoFields | null) ?? null,
+        seo: (p.seo as SeoFields | null) ?? null,
       };
-      const d = (p.draft as PostDoc | null) ?? base;
+      const d = (p.draft as unknown as PostDoc | null) ?? base;
       d.modules = parseModules(d.modules);
       if (!d.modules.length && p.body.trim()) {
         d.modules = markdownToBlocks(p.body);
@@ -330,12 +331,13 @@ function Editor() {
       setSave("saving");
       clearTimeout(timer.current);
       timer.current = setTimeout(async () => {
-        const { error } = await supabase
-          .from("posts")
-          .update({ draft: next as never })
-          .eq("id", id);
-        setSave(error ? "error" : "saved");
-        if (error) toast.error(error.message);
+        try {
+          await savePostDraft({ data: { id, draft: next as unknown as Record<string, unknown> } });
+          setSave("saved");
+        } catch (e) {
+          setSave("error");
+          toast.error((e as Error).message);
+        }
       }, 1000);
     },
     [id],
@@ -425,30 +427,19 @@ function Editor() {
     clearTimeout(timer.current);
     // Author, date, web address and search settings belong to the insight's Settings, which save
     // them live: publishing only adds the content edited here, so it can never undo a setting.
-    const { data: current } = await supabase
-      .from("posts")
-      .select("published_at")
-      .eq("id", id)
-      .single();
-    const published_at = current?.published_at ?? new Date().toISOString();
-    const { error } = await supabase
-      .from("posts")
-      .update({
-        title: doc.title,
-        excerpt: doc.excerpt,
-        cover_url: doc.cover_url,
-        published_at,
-        modules: doc.modules as never,
-        published: true,
-        draft: null,
-      } as never)
-      .eq("id", id);
-    if (error) {
-      toast.error(
-        error.message.includes("duplicate")
-          ? "Another insight already uses this web address."
-          : error.message,
-      );
+    let published_at: string;
+    try {
+      ({ published_at } = await publishPost({
+        data: {
+          id,
+          title: doc.title,
+          excerpt: doc.excerpt,
+          cover_url: doc.cover_url,
+          modules: doc.modules,
+        },
+      }));
+    } catch (e) {
+      toast.error((e as Error).message);
       return;
     }
     setDoc({ ...doc, published_at });
@@ -460,9 +451,10 @@ function Editor() {
   };
   const unpublish = async () => {
     if (!confirm("Take this article off the live site?")) return;
-    const { error } = await supabase.from("posts").update({ published: false }).eq("id", id);
-    if (error) {
-      toast.error(error.message);
+    try {
+      await unpublishPost({ data: { id } });
+    } catch (e) {
+      toast.error((e as Error).message);
       return;
     }
     setLive((l) => ({ ...l, published: false }));
@@ -471,8 +463,12 @@ function Editor() {
   const discard = async () => {
     if (!confirm("Discard unpublished changes?")) return;
     clearTimeout(timer.current);
-    await supabase.from("posts").update({ draft: null }).eq("id", id);
-    window.location.reload();
+    try {
+      await discardPostDraft({ data: { id } });
+      window.location.reload();
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
   };
 
   // With nothing selected: how to edit, what's missing before publishing, and where the

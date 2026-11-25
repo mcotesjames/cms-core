@@ -10,11 +10,11 @@
  * Records, insights, menus and the footer appear on several pages, so their threads are pinned
  * wherever they appear; anything else only where the thread was left.
  */
-import type { Tables } from "@/integrations/supabase/types";
+import type { CommentRow } from "@/data/comments";
 import type { PageKey } from "./page-sections";
 import { isPageKey } from "./pages";
 
-export type CommentRow = Tables<"comments">;
+export type { CommentRow };
 export type Profile = {
   id: string;
   first_name: string;

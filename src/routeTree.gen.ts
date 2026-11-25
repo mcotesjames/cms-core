@@ -24,6 +24,7 @@ import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as InsightsIndexRouteImport } from './routes/insights.index'
 import { Route as InsightsSlugRouteImport } from './routes/insights.$slug'
+import { Route as MediaSplatRouteImport } from './routes/media.$'
 import { Route as StudioArticleRouteImport } from './routes/studio.article'
 import { Route as AdminInsightSettingsIdRouteImport } from './routes/admin.insight-settings.$id'
 import { Route as AdminPageSettingsKeyRouteImport } from './routes/admin.page-settings.$key'
@@ -106,6 +107,11 @@ const InsightsSlugRoute = InsightsSlugRouteImport.update({
   path: '/insights/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MediaSplatRoute = MediaSplatRouteImport.update({
+  id: '/media/$',
+  path: '/media/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StudioArticleRoute = StudioArticleRouteImport.update({
   id: '/studio/article',
   path: '/studio/article',
@@ -151,6 +157,7 @@ export interface FileRoutesByFullPath {
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/users': typeof AdminUsersRoute
   '/insights/$slug': typeof InsightsSlugRoute
+  '/media/$': typeof MediaSplatRoute
   '/studio/article': typeof StudioArticleRoute
   '/admin/': typeof AdminIndexRoute
   '/insights/': typeof InsightsIndexRoute
@@ -173,6 +180,7 @@ export interface FileRoutesByTo {
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/users': typeof AdminUsersRoute
   '/insights/$slug': typeof InsightsSlugRoute
+  '/media/$': typeof MediaSplatRoute
   '/studio/article': typeof StudioArticleRoute
   '/admin': typeof AdminIndexRoute
   '/insights': typeof InsightsIndexRoute
@@ -197,6 +205,7 @@ export interface FileRoutesById {
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/users': typeof AdminUsersRoute
   '/insights/$slug': typeof InsightsSlugRoute
+  '/media/$': typeof MediaSplatRoute
   '/studio/article': typeof StudioArticleRoute
   '/admin/': typeof AdminIndexRoute
   '/insights/': typeof InsightsIndexRoute
@@ -222,6 +231,7 @@ export interface FileRouteTypes {
     | '/admin/settings'
     | '/admin/users'
     | '/insights/$slug'
+    | '/media/$'
     | '/studio/article'
     | '/admin/'
     | '/insights/'
@@ -244,6 +254,7 @@ export interface FileRouteTypes {
     | '/admin/settings'
     | '/admin/users'
     | '/insights/$slug'
+    | '/media/$'
     | '/studio/article'
     | '/admin'
     | '/insights'
@@ -267,6 +278,7 @@ export interface FileRouteTypes {
     | '/admin/settings'
     | '/admin/users'
     | '/insights/$slug'
+    | '/media/$'
     | '/studio/article'
     | '/admin/'
     | '/insights/'
@@ -285,6 +297,7 @@ export interface RootRouteChildren {
   PublicationsRoute: typeof PublicationsRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   InsightsSlugRoute: typeof InsightsSlugRoute
+  MediaSplatRoute: typeof MediaSplatRoute
   StudioArticleRoute: typeof StudioArticleRoute
   InsightsIndexRoute: typeof InsightsIndexRoute
   AdminInsightsIdRoute: typeof AdminInsightsIdRoute
@@ -398,6 +411,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InsightsSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/media/$': {
+      id: '/media/$'
+      path: '/media/$'
+      fullPath: '/media/$'
+      preLoaderRoute: typeof MediaSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/studio/article': {
       id: '/studio/article'
       path: '/studio/article'
@@ -479,6 +499,7 @@ const rootRouteChildren: RootRouteChildren = {
   PublicationsRoute: PublicationsRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   InsightsSlugRoute: InsightsSlugRoute,
+  MediaSplatRoute: MediaSplatRoute,
   StudioArticleRoute: StudioArticleRoute,
   InsightsIndexRoute: InsightsIndexRoute,
   AdminInsightsIdRoute: AdminInsightsIdRoute,

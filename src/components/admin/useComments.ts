@@ -1,6 +1,5 @@
 import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import {
   groupThreads,
   isOpen,
@@ -10,14 +9,19 @@ import {
   type Profile,
 } from "@/lib/comments";
 import { useAdminUser } from "./adminUser";
+import { listProfiles } from "@/data/users";
+import {
+  deleteComment,
+  listComments,
+  reassignThread,
+  replyToThread,
+  setThreadResolved,
+  startThread,
+} from "@/data/comments";
 
 export const commentsQuery = queryOptions({
   queryKey: ["admin", "comments"],
-  queryFn: async () => {
-    const { data, error } = await supabase.from("comments").select("*").order("created_at");
-    if (error) throw error;
-    return data as CommentRow[];
-  },
+  queryFn: () => listComments(),
   // Keeps the "for you" counts current without a reload.
   refetchInterval: 60_000,
 });
@@ -25,21 +29,7 @@ export const commentsQuery = queryOptions({
 /** Everyone who has signed up, with whether an admin has approved them. */
 export const profilesQuery = queryOptions({
   queryKey: ["admin", "profiles"],
-  queryFn: async () => {
-    const [p, r] = await Promise.all([
-      supabase
-        .from("profiles")
-        .select("id, first_name, last_name, email, created_at")
-        .order("created_at"),
-      supabase.from("user_roles").select("user_id, role"),
-    ]);
-    if (p.error) throw p.error;
-    if (r.error) throw r.error;
-    const admins = new Set((r.data ?? []).filter((x) => x.role === "admin").map((x) => x.user_id));
-    return (p.data ?? []).map((x) => ({ ...x, approved: admins.has(x.id) })) as Array<
-      Profile & { created_at: string }
-    >;
-  },
+  queryFn: () => listProfiles(),
 });
 
 export function useProfiles() {
@@ -55,13 +45,18 @@ export function useComments() {
   const rows = useQuery(commentsQuery).data;
   const threads = rows ? groupThreads(rows) : [];
   const refresh = () => qc.invalidateQueries({ queryKey: commentsQuery.queryKey });
-  const run = async (p: PromiseLike<{ error: { message: string } | null }>) => {
-    const { error } = await p;
-    if (error) toast.error(error.message);
+  /** Runs an action, reports a failure, refreshes; true when it worked. */
+  const run = async (p: Promise<unknown>) => {
+    let ok = true;
+    try {
+      await p;
+    } catch (e) {
+      ok = false;
+      toast.error((e as Error).message);
+    }
     await refresh();
-    return !error;
+    return ok;
   };
-  const now = () => new Date().toISOString();
   return {
     ready: !!rows,
     threads,
@@ -75,42 +70,21 @@ export function useComments() {
       assignee_id: string;
       position?: PinPosition | null;
     }) {
-      const { data, error } = await supabase
-        .from("comments")
-        .insert({ ...t, author_id: me.id })
-        .select("id")
-        .single();
-      if (error) toast.error(error.message);
+      let id: string | null = null;
+      try {
+        id = (await startThread({ data: t as Parameters<typeof startThread>[0]["data"] })).id;
+      } catch (e) {
+        toast.error((e as Error).message);
+      }
       await refresh();
-      return data?.id ?? null;
+      return id;
     },
     reply: (root: CommentRow, body: string) =>
-      run(
-        supabase.from("comments").insert({
-          thread_id: root.id,
-          anchor: root.anchor,
-          opened_on: root.opened_on,
-          device: root.device,
-          body,
-          author_id: me.id,
-        }),
-      ),
-    resolve: (id: string) =>
-      run(
-        supabase
-          .from("comments")
-          .update({ resolved_at: now(), resolved_by: me.id, updated_at: now() })
-          .eq("id", id),
-      ),
-    reopen: (id: string) =>
-      run(
-        supabase
-          .from("comments")
-          .update({ resolved_at: null, resolved_by: null, updated_at: now() })
-          .eq("id", id),
-      ),
+      run(replyToThread({ data: { threadId: root.id, body } })),
+    resolve: (id: string) => run(setThreadResolved({ data: { id, resolved: true } })),
+    reopen: (id: string) => run(setThreadResolved({ data: { id, resolved: false } })),
     reassign: (id: string, assignee_id: string) =>
-      run(supabase.from("comments").update({ assignee_id, updated_at: now() }).eq("id", id)),
-    remove: (id: string) => run(supabase.from("comments").delete().eq("id", id)),
+      run(reassignThread({ data: { id, assignee_id } })),
+    remove: (id: string) => run(deleteComment({ data: { id } })),
   };
 }

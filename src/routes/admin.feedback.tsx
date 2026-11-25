@@ -1,7 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { listStudioPosts } from "@/data/entries";
+import { listStudioRecords } from "@/data/records";
 import { Button } from "@/components/ui/button";
 import { ThreadRow } from "@/components/admin/CommentThreads";
 import { useComments } from "@/components/admin/useComments";
@@ -20,13 +21,13 @@ function usePlaceNames() {
       queryKey: ["admin", "comment-place-names"],
       queryFn: async () => {
         const [p, i, u] = await Promise.all([
-          supabase.from("posts").select("id, title"),
-          supabase.from("investments").select("id, name"),
-          supabase.from("publications").select("id, title"),
+          listStudioPosts(),
+          listStudioRecords({ data: { table: "investments" } }),
+          listStudioRecords({ data: { table: "publications" } }),
         ]);
-        const map = (rows: Array<{ id: string; title?: string; name?: string }> | null) =>
-          Object.fromEntries((rows ?? []).map((r) => [r.id, r.title ?? r.name ?? ""]));
-        return { posts: map(p.data), records: { ...map(i.data), ...map(u.data) } };
+        const map = (rows: Array<{ id: string; title?: unknown; name?: unknown }>) =>
+          Object.fromEntries(rows.map((r) => [r.id, String(r.title ?? r.name ?? "")]));
+        return { posts: map(p), records: { ...map(i), ...map(u) } };
       },
     }).data ?? { posts: {}, records: {} }
   );

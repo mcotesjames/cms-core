@@ -111,21 +111,6 @@ export function moveItem(rows: ListRow[], id: string, dir: -1 | 1): ListRow[] | 
   return next;
 }
 
-/**
- * What Publish writes for one list: every draft row upserted with its position as `sort`,
- * and the ids of live rows the editor deleted from the draft.
- */
-export function planPublish(
-  live: ListRow[],
-  draft: ListRow[],
-): { upserts: ListRow[]; deletes: string[] } {
-  const keep = new Set(draft.map((r) => r.id));
-  return {
-    upserts: draft.map((r, i) => ({ ...r, sort: i + 1 })),
-    deletes: live.filter((r) => !keep.has(r.id)).map((r) => r.id),
-  };
-}
-
 /** Converts a click inside the biography canvas into rounded % coordinates for a hotspot. */
 export function placeInBox(
   box: { left: number; top: number; width: number; height: number },

@@ -1,5 +1,5 @@
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { getSiteContent } from "@/data/content";
 import { normalizeSiteContent } from "./site-content-shape";
 
 /** Flexible sections every page row can carry (see lib/page-sections.ts). */
@@ -43,13 +43,7 @@ export type SiteContent = {
 /** Live (published) page and settings content, keyed by page. */
 export const siteContentQuery = queryOptions({
   queryKey: ["site_content"],
-  queryFn: async () => {
-    const { data, error } = await supabase.from("site_content").select("key, content");
-    if (error) throw error;
-    return normalizeSiteContent(
-      Object.fromEntries(data.map((r) => [r.key, r.content])),
-    ) as unknown as SiteContent;
-  },
+  queryFn: async () => normalizeSiteContent(await getSiteContent()) as unknown as SiteContent,
   staleTime: 60_000,
 });
 

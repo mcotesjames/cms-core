@@ -1,123 +1,81 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
+import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import type { User } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SITE_NAME } from "@/lib/seo";
+import { devSignIn, getMe, setMyName } from "@/data/users";
 import brandLogo from "@/assets/brand/wordmark-dark.svg";
 import { AdminUserContext, type AdminUser } from "./adminUser";
 
-function SignIn() {
-  const [mode, setMode] = useState<"in" | "up">("in");
-  const [form, setForm] = useState({ first: "", last: "", email: "", password: "" });
-  const [busy, setBusy] = useState(false);
-  const [sent, setSent] = useState(false);
-  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setForm({ ...form, [k]: e.target.value });
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setBusy(true);
-    const { error } =
-      mode === "in"
-        ? await supabase.auth.signInWithPassword({ email: form.email, password: form.password })
-        : await supabase.auth.signUp({
-            email: form.email,
-            password: form.password,
-            options: {
-              data: { first_name: form.first.trim(), last_name: form.last.trim() },
-              emailRedirectTo: `${window.location.origin}/admin`,
-            },
-          });
-    setBusy(false);
-    if (error) toast.error(error.message);
-    else if (mode === "up") setSent(true);
+export const meQuery = queryOptions({ queryKey: ["admin", "me"], queryFn: () => getMe() });
+
+/** Signs out (dev placeholder) and returns to the sign-in screen. */
+export function useSignOut() {
+  const qc = useQueryClient();
+  return async () => {
+    await devSignIn({ data: { id: null } });
+    // Refetch who's signed in first (the gate swaps to the sign-in screen), then drop the
+    // previous user's Studio data so nothing of theirs is shown to the next one.
+    await qc.invalidateQueries({ queryKey: meQuery.queryKey });
+    qc.removeQueries({ predicate: (q) => q.queryKey[0] === "admin" && q.queryKey[1] !== "me" });
   };
-  if (sent)
+}
+
+/**
+ * Sign-in placeholder until Better Auth (spec Phase 3). In `vite dev` you sign in as one of the
+ * seeded accounts (db/seed.sql); a built site has no sign-in yet, so the Studio stays closed.
+ */
+function SignIn({
+  accounts,
+}: {
+  accounts: NonNullable<Awaited<ReturnType<typeof getMe>>["devAccounts"]> | null;
+}) {
+  const qc = useQueryClient();
+  const signIn = async (id: string) => {
+    try {
+      await devSignIn({ data: { id } });
+      await qc.invalidateQueries();
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  };
+  if (!accounts)
     return (
       <Centered>
         <BrandLogo />
-        <h1 className="text-lg">Check your email</h1>
+        <h1 className="text-lg">The Content Studio is closed</h1>
         <p className="text-muted-foreground">
-          We've sent a link to {form.email} to confirm your account. After that, an admin needs to
-          approve it before you can use the Content Studio.
+          Sign-in isn't available on this site yet. It arrives with the next release.
         </p>
-        <Button
-          variant="outline"
-          onClick={() => {
-            setSent(false);
-            setMode("in");
-          }}
-        >
-          Back to sign in
-        </Button>
       </Centered>
     );
   return (
     <div className="flex min-h-screen items-center justify-center px-6">
-      <form onSubmit={submit} className="w-full max-w-sm space-y-4">
+      <div className="w-full max-w-sm space-y-4">
         <BrandLogo />
-        <h1 className="text-lg">
-          {mode === "in" ? "Sign in to the Content Studio" : "Create an account"}
-        </h1>
-        {mode === "up" && (
-          <div className="grid grid-cols-2 gap-3">
-            <Input
-              required
-              placeholder="First name"
-              aria-label="First name"
-              autoComplete="given-name"
-              value={form.first}
-              onChange={set("first")}
-            />
-            <Input
-              required
-              placeholder="Last name"
-              aria-label="Last name"
-              autoComplete="family-name"
-              value={form.last}
-              onChange={set("last")}
-            />
-          </div>
-        )}
-        <Input
-          type="email"
-          required
-          placeholder="Email"
-          aria-label="Email"
-          autoComplete="email"
-          value={form.email}
-          onChange={set("email")}
-        />
-        <Input
-          type="password"
-          required
-          minLength={mode === "up" ? 8 : undefined}
-          placeholder="Password"
-          aria-label="Password"
-          autoComplete={mode === "in" ? "current-password" : "new-password"}
-          value={form.password}
-          onChange={set("password")}
-        />
-        <Button type="submit" className="w-full" disabled={busy}>
-          {mode === "in" ? "Sign in" : "Create account"}
-        </Button>
-        <p className="text-center text-sm text-muted-foreground">
-          {mode === "in" ? "New here? " : "Already have an account? "}
-          <button
-            type="button"
-            className="text-foreground underline underline-offset-4"
-            onClick={() => setMode(mode === "in" ? "up" : "in")}
-          >
-            {mode === "in" ? "Create an account" : "Sign in"}
-          </button>
+        <h1 className="text-lg">Sign in to the Content Studio</h1>
+        <p className="text-sm text-muted-foreground">
+          Local development: choose a seeded account. Real sign-in arrives with Better Auth.
         </p>
-        {mode === "up" && (
-          <p className="text-xs text-muted-foreground">
-            New accounts are approved by an admin before they can use the Content Studio.
-          </p>
-        )}
-      </form>
+        <ul className="space-y-2">
+          {accounts.map((a) => (
+            <li key={a.id}>
+              <Button
+                variant="outline"
+                className="h-auto w-full justify-between py-3"
+                onClick={() => signIn(a.id)}
+              >
+                <span className="text-left">
+                  <span className="block">{a.name}</span>
+                  <span className="block text-xs text-muted-foreground">{a.email}</span>
+                </span>
+                <span className="text-xs text-muted-foreground">{a.role}</span>
+              </Button>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }
@@ -136,14 +94,12 @@ function NamePrompt({ onSaved }: { onSaved: (first: string, last: string) => voi
   const [last, setLast] = useState("");
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { data } = await supabase.auth.getUser();
-    if (!data.user) return;
-    const { error } = await supabase
-      .from("profiles")
-      .update({ first_name: first.trim(), last_name: last.trim() })
-      .eq("id", data.user.id);
-    if (error) toast.error(error.message);
-    else onSaved(first.trim(), last.trim());
+    try {
+      await setMyName({ data: { first: first.trim(), last: last.trim() } });
+      onSaved(first.trim(), last.trim());
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
   };
   return (
     <div className="flex min-h-screen items-center justify-center px-6">
@@ -200,41 +156,20 @@ export function AdminGate({ children }: { children: ReactNode }) {
 }
 
 function AdminAccess({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
-  const [profile, setProfile] = useState<{ first_name: string; last_name: string } | null>(null);
-  const [ready, setReady] = useState(false);
-  useEffect(() => {
-    const check = async () => {
-      const { data } = await supabase.auth.getUser();
-      setUser(data.user);
-      if (data.user) {
-        const [{ data: r }, { data: p }] = await Promise.all([
-          supabase.rpc("has_role", { _user_id: data.user.id, _role: "admin" }),
-          supabase
-            .from("profiles")
-            .select("first_name, last_name")
-            .eq("id", data.user.id)
-            .maybeSingle(),
-        ]);
-        setIsAdmin(!!r);
-        setProfile(p ?? { first_name: "", last_name: "" });
-      } else setIsAdmin(null);
-      setReady(true);
-    };
-    check();
-    const { data: sub } = supabase.auth.onAuthStateChange((ev) => {
-      if (ev === "SIGNED_IN" || ev === "SIGNED_OUT" || ev === "USER_UPDATED") check();
-    });
-    return () => sub.subscription.unsubscribe();
-  }, []);
+  const qc = useQueryClient();
+  const signOut = useSignOut();
+  const { data, isPending } = useQuery(meQuery);
+  const user = data?.user ?? null;
   const value = useMemo<AdminUser | null>(
-    () => (user && profile ? { id: user.id, email: user.email ?? "", ...profile } : null),
-    [user, profile],
+    () =>
+      user
+        ? { id: user.id, email: user.email, first_name: user.firstName, last_name: user.lastName }
+        : null,
+    [user],
   );
-  if (!ready) return null;
-  if (!user) return <SignIn />;
-  if (!isAdmin)
+  if (isPending) return null;
+  if (!user) return <SignIn accounts={data?.devAccounts ?? null} />;
+  if (user.role === "pending")
     return (
       <Centered>
         <h1 className="text-lg">Waiting for approval</h1>
@@ -242,15 +177,13 @@ function AdminAccess({ children }: { children: ReactNode }) {
           Your account ({user.email}) has been created. An admin needs to approve it in Settings →
           Users before you can use the Content Studio.
         </p>
-        <Button variant="outline" onClick={() => supabase.auth.signOut()}>
+        <Button variant="outline" onClick={signOut}>
           Sign out
         </Button>
       </Centered>
     );
-  if (profile && !profile.first_name.trim())
-    return (
-      <NamePrompt onSaved={(first_name, last_name) => setProfile({ first_name, last_name })} />
-    );
+  if (!user.firstName.trim())
+    return <NamePrompt onSaved={() => qc.invalidateQueries({ queryKey: meQuery.queryKey })} />;
   return <AdminUserContext.Provider value={value}>{children}</AdminUserContext.Provider>;
 }
 

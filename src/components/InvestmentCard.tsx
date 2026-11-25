@@ -4,14 +4,14 @@ import { BrandSymbol } from "@/components/BrandSymbol";
 import { investmentTags, investmentWebsite } from "@/lib/investments";
 import { isFilled } from "@/lib/show-if";
 import { useStudioMode } from "@/lib/studio-mode";
-import type { Tables } from "@/integrations/supabase/types";
+import type { Investment } from "@/lib/content";
 
 export function InvestmentCard({
   company,
   open,
   onOpen,
 }: {
-  company: Tables<"investments">;
+  company: Investment;
   open: boolean;
   onOpen: (id: string | null) => void;
 }) {

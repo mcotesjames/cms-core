@@ -55,7 +55,7 @@ A site's code can only reach its own bindings, so client data is separated by in
 
 ### Data layer (`src/data/`)
 - **The only code that talks to D1 or R2.** Routes, components and the Studio call named functions (`getPage`, `saveDraft`, `publishEntry`, `listRecords`, `uploadMedia`…), never the database directly.
-- **Access is denied by default.** Every Studio server function is created through one wrapper, `studioFn(role, handler)`, which checks the session and role before the handler runs. Public reads go through `publicFn(handler)`, which can only read live columns. A test lists every server function and fails if one bypasses the wrappers. These checks replace Supabase's RLS policies: drafts, unapproved accounts and the media library are protected here.
+- **Access is denied by default.** Every server function lives in `src/data/` and starts its chain with one access middleware from `src/data/access.ts`: `asVisitor` for public reads (live columns only, never `draft`), or `asEditor` / `asAdmin` / `asOwner` for Studio functions, which check the session and role before the handler runs and pass the user on as `context.user`. (These are the `publicFn` / `studioFn` wrappers: TanStack Start's compiler needs each `createServerFn(…).handler(…)` chain written out in place, so the wrapper is a middleware rather than a factory.) `src/test/server-fns.test.ts` lists every server function and fails if one is defined elsewhere or skips the middleware. These checks replace Supabase's RLS policies: drafts, unapproved accounts and the media library are protected here.
 - **Each field has exactly one writer** (section 5 → Page settings). The data layer enforces it: Publish preserves live values of fields it doesn't own.
 - **Validation from config:** each record type's `data`, each section's fields and each list item are checked against a schema (zod) generated from the declarations in `site.config.ts`. The Studio form, the data layer and the public site share that one definition.
 - **Schema and migrations with Drizzle** (D1 / SQLite dialect); generated SQL migration files are committed.
@@ -69,7 +69,7 @@ A site's code can only reach its own bindings, so client data is separated by in
 - **Sitemap and robots** are server routes built from published content and cached like pages.
 
 ### Media
-- Uploads go to the site's R2 bucket, served from a stable public path (`/media/<key>` via the Worker, with long cache headers). **No expiring signed links.**
+- Uploads go to the site's R2 bucket under `library/<timestamp>-<name>`, served from a stable public path (`/media/<key>` via the Worker, `cache-control: public, max-age=31536000, immutable`, ETag / 304). **No expiring signed links.** Content stores the path; share tags make it absolute.
 - **Images are resized and compressed in the browser before upload** (canvas / `createImageBitmap`; max dimension and quality set in site config). Workers can't run `sharp`, and this keeps uploads small and free. The original file is not kept.
 - SVG and non-image files upload unchanged.
 
@@ -97,9 +97,9 @@ JSON is stored as `TEXT` and validated in the data layer; IDs are generated in c
 | `list_items` | Items inside sections (cards, accordions, positioned items…) | `id`, `list`, `position`, `data` (JSON) |
 | `site_content` | One row per page, plus `settings`, `menus`, `lists` (list drafts), `pages` (created-page index) | `key`, `data` (JSON), `draft` (JSON) |
 | `media` | Media library | `id`, `key`, `filename`, `mime`, `bytes`, `width`, `height`, `alt`, `previous_key`, `uploaded_by`, `created_at` |
-| `users` | Studio accounts | `id`, `email`, `first_name`, `last_name`, `role`, `created_at`, `approved_at` |
+| `users` | Studio accounts | `id`, `email`, `first_name`, `last_name`, `role` (`pending` / `editor` / `admin` / `owner`), `created_at`, `approved_at` |
 | `sessions`, `accounts`, `verifications` | Sign-in sessions and codes (Better Auth's own tables) | as Better Auth defines them |
-| `comments` | Feedback threads and replies | `id`, `parent_id`, `target` (JSON address), `position` (JSON), `body`, `author_id`, `for_user_id`, `device`, `resolved_at`, `created_at` |
+| `comments` | Feedback threads and replies | `id`, `thread_id` (null for a thread, the thread's id for a reply), `anchor` (element address), `opened_on` (`page:<key>`, `post:<id>`, `record:<table>:<id>`), `position` (JSON), `body`, `author_id`, `assignee_id` (who it's for), `device`, `resolved_at`, `resolved_by`, `created_at`, `updated_at` |
 
 - **Records are one generic table.** A record type's fields are declared in site config and stored in `data`. New record types need no migration.
 - **Multi-value fields** are stored as a JSON array (not a joined string), ordered as the option list orders them.
@@ -612,20 +612,24 @@ Write the standing rules (content ownership, content safety, content kinds, temp
 
 Each phase leaves a site that works end to end, so every step can be checked against the one before.
 
-### Phase 0 — Fork and tidy ☐
+### Phase 0 — Fork and tidy ◐
 - ✅ Copy the original codebase into a **new** platform repo, cut off from the original project (its repo, Lovable project, Supabase database and Worker are never touched). Deleted `.env`, `supabase/`, `.lovable/`, `.wrangler/`, the build output, the Lovable migration settings and the original Postgres migrations, and removed the original client's name, logo, symbol, copy, people and addresses.
 - ◐ Fix lint (Prettier auto-fix, then the `any` types and hook-dependency warnings) and remove unused packages, so they aren't carried into every site. Formatting fixed; 35 unused UI components and 31 unused packages removed; npm lockfile replaces the builder's private-mirror one. The 18 `any` types and 6 hook-dependency warnings are all in Studio code that calls Supabase directly, so they're fixed in Phase 1, where those calls move into `src/data/` and can be clicked through.
 
-### Phase 1 — Data layer, still on Supabase ☐
-- ☐ Move every database and storage call behind `src/data/` functions with the `studioFn` / `publicFn` wrappers, still backed by Supabase. The site keeps working and the tests stay green.
-- ☐ Add the test that fails if a server function bypasses the wrappers.
+### Phase 1 — Data layer on D1 + R2 ◐ (merged with the former Phase 2)
+*Merged on 2026-11-25: the repo has no Supabase project (the only one it ever pointed at is the original client's live database), so wrapping Supabase calls first would have been untestable throwaway work. Building the data layer straight onto local D1 and R2 keeps every step clickable.*
+- ✅ Wrangler config with D1 and R2 bindings; local dev with a local D1 database and R2 bucket (`npm run db:reset` seeds `db/seed.sql`, fixtures only).
+- ✅ Drizzle schema (section 2) and committed SQL migrations; generic `entries`, `records` and `list_items`.
+- ✅ `src/data/` with the access middlewares, and the test that fails if a server function bypasses them.
+- ✅ Every area moved onto `src/data/` and clicked through on local D1/R2: public pages and sitemap; sign-in, approval and users; insights (create, draft, publish, settings, duplicate address refused); page editing and publish; list items; records (create, delete, reorder); media upload and library; comments (thread, reply, resolve, open from Feedback); new page creation and publish.
+- ✅ Sign-in placeholder until Phase 3: pick a seeded account in dev only; a built Worker has no signed-in user, so the Studio is closed.
+- ◐ Fix the `any` types and hook-dependency warnings as their files move: their data calls have moved; 15 `any` types and 7 hook warnings remain in Studio form and editor UI code (DraftForm, TableEditor, PageCanvas, useSiteDraft, the insight editor and Settings screens).
+- ✅ Browser-side image resize; stable R2 media paths (`/media/<key>`).
+- ◐ Sitemap as a server route on the data layer. ☐ Worker rendering with the edge cache, and cache clearing on Publish and Settings saves; robots as a server route; a smoke test of the built Worker under `wrangler dev`.
+- ✅ Deleted `src/integrations/supabase/` and the Supabase package.
+- ☐ Replace the builder's Vite preset (`@lovable.dev/vite-tanstack-config`) and its error-reporting hook (`lib/lovable-error-reporting.ts`) with a plain TanStack Start + Nitro config.
 
-### Phase 2 — Swap to D1 + R2 ☐
-- ☐ Drizzle schema (section 2); generic `records` and `list_items`; local dev with `wrangler dev`.
-- ☐ Re-implement `src/data/` on D1 and R2, one area at a time, behind the same functions.
-- ☐ Browser-side image resize; stable R2 media paths.
-- ☐ Worker rendering with the edge cache, and cache clearing on Publish and Settings saves. Sitemap and robots as server routes.
-- ☐ Delete `supabase/` once nothing reads it.
+### Phase 2 — (merged into Phase 1)
 
 ### Phase 3 — Auth ☐
 - ☐ Better Auth sign-in (open decision 1), rate limiting, roles, approval, Users screen.
@@ -787,6 +791,8 @@ Still unchecked in the browser in the original build (check during the port): pu
 ## 17. Change Log
 
 Newest first. Each entry: date, what changed, how, and any follow-ups.
+
+- **2026-11-25 · Phase 1: data layer on D1 + R2 (merged with former Phase 2) · Claude** — The site and Studio now run on Cloudflare D1 and R2 through `src/data/`; Supabase is gone. Added `wrangler.jsonc` (D1 `DB`, R2 `MEDIA`), the Drizzle schema (`src/data/schema.ts`: site_content, entries, records, list_items, media, users, comments) with its first migration (`migrations/platform/0000_init.sql`), a fixture seed and `db:*` scripts. Access is denied by default: every server function starts with `asVisitor` / `asEditor` / `asAdmin` / `asOwner` (a test enforces it). Public reads (`content.ts`) return only live columns; Studio modules cover entries, site rows and list publishing (one D1 batch), records, media, comments and users. Components keep their shapes (`shapes.ts` maps generic rows). Sign-in is a dev-only placeholder (pick a seeded account); a built Worker has no signed-in user. Media: browser resize (2400px / 0.82), R2 under `library/…`, served at `/media/<key>` with immutable caching; share images made absolute. Approving a user now sets role `admin` (as every approved account was before). Records are sorted A–Z by name in the Studio (previously Z–A). Checks: type check, 110 tests and the build pass; every area clicked through locally (see roadmap). Follow-ups: the remaining `any` types and hook warnings; Worker rendering with the edge cache; a smoke test of the built Worker; replacing the builder's Vite preset.
 
 - **2026-11-25 · Phase 0: fork and tidy · Claude** — This repo is now the platform repo, cut off from the original client build: its GitHub remote, `.env`, `supabase/`, `.lovable/`, build output, Drizzle/Postgres migrations and Lovable migration config are gone, so nothing here can reach that build's database, Lovable project or Worker. The original client's name, logo, symbol, copy, people and addresses are removed: placeholder wordmarks (`src/assets/brand/wordmark-{dark,light}.svg`) and `BrandSymbol`; `SITE_NAME` / `SITE_URL` / `SITE_HOST` in `lib/seo.ts` (mcotesjames.com, until site config exists); CSS prefixes `osel-admin` → `studio` (per section 4 → Studio theme), `osel-studio-*` → `studio-*`, other `osel-*` → `site-*`. The original features (investments, publications, pillars, biography, Interactive) stay as neutral fixtures until Phase 4. Lint formatting fixed, unused UI components and packages removed, `package-lock.json` replaces `bun.lock`. Checks: type check, 110 tests and build pass; not clicked through in a browser (no database until Phase 2). Follow-ups: the `any` types and hook warnings (Phase 1); `@lovable.dev/vite-tanstack-config` is still the Vite preset — replace with a plain TanStack Start + Nitro config when the Worker config is written (Phase 2).
 

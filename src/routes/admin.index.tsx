@@ -1,8 +1,7 @@
+import { createPost, deletePost, duplicatePost, listStudioPosts } from "@/data/entries";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { fetchSiteRows, fetchPostDrafts, ADMIN_POST_COLUMNS } from "@/lib/admin-drafts";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { blockId } from "@/lib/blocks-convert";
@@ -28,60 +27,29 @@ function InsightsList() {
   const navigate = useNavigate();
   const [rows, setRows] = useState<Row[]>([]);
   const load = async () => {
-    const [{ data, error }, drafts] = await Promise.all([
-      supabase
-        .from("posts")
-        .select("id,title,slug,published,published_at")
-        .order("published_at", { ascending: false, nullsFirst: true }),
-      fetchPostDrafts().catch(() => ({}) as Record<string, unknown>),
-    ]);
-    if (error) toast.error(error.message);
-    else setRows((data ?? []).map((r) => ({ ...r, draft: drafts[r.id] ?? null })) as Row[]);
+    try {
+      setRows((await listStudioPosts()) as unknown as Row[]);
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
   };
   useEffect(() => {
     load();
   }, []);
 
   const create = async () => {
-    const { data, error } = await supabase
-      .from("posts")
-      .insert({
-        title: "Untitled insight",
-        slug: `untitled-${Date.now().toString(36)}`,
-        published: false,
-        modules: [{ id: blockId(), type: "rich_text", body: "" }],
-      })
-      .select("id")
-      .single();
-    if (error) {
-      toast.error(error.message);
-      return;
+    try {
+      const { id } = await createPost({ data: { firstBlockId: blockId() } });
+      navigate({ to: "/admin/insights/$id", params: { id } });
+    } catch (e) {
+      toast.error((e as Error).message);
     }
-    navigate({ to: "/admin/insights/$id", params: { id: data.id } });
   };
   const duplicate = async (id: string) => {
-    const { data: p, error } = await supabase
-      .from("posts")
-      .select(ADMIN_POST_COLUMNS)
-      .eq("id", id)
-      .single();
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    const { id: _, created_at: __, ...rest } = p;
-    const res = await supabase
-      .from("posts")
-      .insert({
-        ...rest,
-        title: `${p.title} (copy)`,
-        slug: `${p.slug}-copy-${Date.now().toString(36)}`,
-        published: false,
-      })
-      .select("id")
-      .single();
-    if (res.error) {
-      toast.error(res.error.message);
+    try {
+      await duplicatePost({ data: { id } });
+    } catch (e) {
+      toast.error((e as Error).message);
       return;
     }
     toast.success("Duplicated as a draft");
@@ -89,9 +57,12 @@ function InsightsList() {
   };
   const remove = async (r: Row) => {
     if (!confirm(`Delete “${r.title}”? This cannot be undone.`)) return;
-    const { error } = await supabase.from("posts").delete().eq("id", r.id);
-    if (error) toast.error(error.message);
-    else load();
+    try {
+      await deletePost({ data: { id: r.id } });
+      load();
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
   };
 
   return (

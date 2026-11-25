@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { fetchSiteRows, fetchPostDrafts, ADMIN_POST_COLUMNS } from "@/lib/admin-drafts";
+import { fetchSiteRows } from "@/lib/admin-drafts";
+import { listStudioPosts } from "@/data/entries";
 import { useNavigate } from "@tanstack/react-router";
 import { queryOptions, useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { useComments } from "./useComments";
@@ -23,24 +23,15 @@ import {
 const switcherQuery = queryOptions({
   queryKey: ["admin", "switcher"],
   queryFn: async () => {
-    const [sc, p, postDrafts] = await Promise.all([
-      fetchSiteRows().then((data) => ({ data, error: null })),
-      supabase
-        .from("posts")
-        .select("id, title, published, published_at")
-        .order("published_at", { ascending: false, nullsFirst: true }),
-      fetchPostDrafts(),
-    ]);
-    if (sc.error) throw sc.error;
-    if (p.error) throw p.error;
+    const [rows, posts] = await Promise.all([fetchSiteRows(), listStudioPosts()]);
     return {
-      drafts: (sc.data ?? []).filter((r) => r.draft != null).map((r) => r.key),
-      posts: (p.data ?? []).map((r) => ({
+      drafts: rows.filter((r) => r.draft != null).map((r) => r.key),
+      posts: posts.map((r) => ({
         id: r.id,
         title: r.title,
         published: r.published,
         published_at: r.published_at,
-        hasDraft: postDrafts[r.id] != null,
+        hasDraft: r.draft != null,
       })) as SwitcherPost[],
     };
   },

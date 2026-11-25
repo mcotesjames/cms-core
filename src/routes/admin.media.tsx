@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { signMedia, uploadMedia } from "@/lib/media";
+import { uploadMedia } from "@/lib/media";
+import { listMedia } from "@/data/media";
 
 export const Route = createFileRoute("/admin/media")({ component: MediaLibrary });
 
@@ -17,21 +17,10 @@ function MediaLibrary() {
   const [items, setItems] = useState<Item[]>([]);
   const [busy, setBusy] = useState(false);
   const load = async () => {
-    const lists = await Promise.all(
-      ["", "library"].map((dir) =>
-        supabase.storage
-          .from("media")
-          .list(dir, { limit: 500, sortBy: { column: "created_at", order: "desc" } }),
-      ),
-    );
-    const paths = lists.flatMap((l, i) =>
-      (l.data ?? []).filter((f) => f.id).map((f) => (i ? `library/${f.name}` : f.name)),
-    );
     try {
-      const urls = await signMedia(paths);
-      setItems(paths.map((p) => ({ path: p, url: urls[p] ?? "" })));
-    } catch (e: any) {
-      toast.error(e.message);
+      setItems((await listMedia()).map((m) => ({ path: m.key, url: m.url })));
+    } catch (e) {
+      toast.error((e as Error).message);
     }
   };
   useEffect(() => {
@@ -56,8 +45,8 @@ function MediaLibrary() {
               for (const f of files) await uploadMedia(f);
               toast.success("Uploaded");
               load();
-            } catch (err: any) {
-              toast.error(err.message);
+            } catch (err) {
+              toast.error((err as Error).message);
             } finally {
               setBusy(false);
             }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { deleteRecord, listStudioRecords, reorderRecords, saveRecord } from "@/data/records";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,9 +30,9 @@ export type Field = {
   options?: string[];
 };
 
-type Table =
-  "pillars" | "stack_cards" | "hotspots" | "partners" | "posts" | "investments" | "publications";
-type Row = Record<string, any> & { id?: string };
+/** Record types edited as a list with a form drawer (spec section 4 → Records). */
+type Table = RecordTable;
+type Row = Record<string, unknown> & { id?: string };
 
 /** One field editor (text, image upload, bullet list, accordions…); also used for list items in the page editor. */
 export function FieldInput({
@@ -229,16 +229,15 @@ export function TableEditor({
   const [sel, setSel] = useState<Row | null>(null);
 
   const load = async () => {
-    const { data, error } = await supabase
-      .from(table)
-      .select("*")
-      .order(order, { ascending: order === "sort" });
-    if (error) {
-      toast.error(error.message);
+    let data: Row[];
+    try {
+      data = (await listStudioRecords({ data: { table, order } })) as Row[];
+    } catch (e) {
+      toast.error((e as Error).message);
       return;
     }
-    setRows(data as Row[]);
-    if (focus?.record && !sel) setSel((data as Row[]).find((r) => r.id === focus.record) ?? null);
+    setRows(data);
+    if (focus?.record && !sel) setSel(data.find((r) => r.id === focus.record) ?? null);
   };
   const threads = useComments().threads;
   const openCount = (id?: string) =>
@@ -252,33 +251,24 @@ export function TableEditor({
 
   const save = async () => {
     if (!sel) return;
-    const { id, ...rest } = sel;
-    const res = id
-      ? await supabase
-          .from(table)
-          .update(rest as never)
-          .eq("id", id)
-          .select()
-          .single()
-      : await supabase
-          .from(table)
-          .insert(rest as never)
-          .select()
-          .single();
-    if (res.error) {
-      toast.error(res.error.message);
+    let saved: Row;
+    try {
+      saved = (await saveRecord({ data: { table, row: sel } })) as Row;
+    } catch (e) {
+      toast.error((e as Error).message);
       return;
     }
     toast.success("Saved");
-    setSel(res.data as Row);
+    setSel(saved);
     qc.invalidateQueries();
     load();
   };
   const remove = async () => {
     if (!sel?.id || !confirm("Delete this item?")) return;
-    const { error } = await supabase.from(table).delete().eq("id", sel.id);
-    if (error) {
-      toast.error(error.message);
+    try {
+      await deleteRecord({ data: { table, id: sel.id } });
+    } catch (e) {
+      toast.error((e as Error).message);
       return;
     }
     setSel(null);
@@ -294,16 +284,11 @@ export function TableEditor({
     [next[i], next[i + dir]] = [next[i + dir]!, next[i]!];
     const ordered = next.map((r, j) => ({ ...r, sort: j + 1 }));
     setRows(ordered);
-    const results = await Promise.all(
-      ordered.map((r) =>
-        supabase
-          .from(table)
-          .update({ sort: r.sort } as never)
-          .eq("id", r.id!),
-      ),
-    );
-    const err = results.find((r) => r.error)?.error;
-    if (err) toast.error(err.message);
+    try {
+      await reorderRecords({ data: { table, ids: ordered.map((r) => r.id!) } });
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
     qc.invalidateQueries();
   };
 
@@ -324,7 +309,7 @@ export function TableEditor({
               onClick={() => setSel(r)}
               className={`block min-w-0 flex-1 truncate rounded-sm px-3 py-2 text-left text-sm transition-colors ${sel?.id === r.id ? "bg-primary text-primary-foreground" : "hover:bg-accent"}`}
             >
-              {r[titleKey] || "Untitled"}
+              {String(r[titleKey] ?? "") || "Untitled"}
               {openCount(r.id) > 0 && (
                 <span className="studio-count ml-2" aria-label={`${openCount(r.id)} open comments`}>
                   {openCount(r.id)}

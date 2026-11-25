@@ -1,0 +1,19 @@
+// Cloudflare config for this site's Worker. Each site gets its own D1 database and R2 bucket
+// (spec section 2); the setup script (spec section 10) writes the real IDs per site, never copied
+// from another site. Locally, `npm run dev` uses a local D1 and R2 under .wrangler/state.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cms-core",
+  "compatibility_date": "2026-11-16",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "cms-core",
+      // Placeholder until the setup script creates the real database.
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations/platform",
+    },
+  ],
+  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "cms-core-media" }],
+}

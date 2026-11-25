@@ -44,6 +44,8 @@ export const FIXED_PAGE_SEO: Record<string, { title: string; description: string
 };
 
 const clean = (v: unknown) => (typeof v === "string" ? v.trim() : "");
+/** Uploaded media is stored as a site path (`/media/…`); share tags need a full address. */
+export const absoluteUrl = (url: string) => (url.startsWith("/") ? `${SITE_URL}${url}` : url);
 export const readSeoFields = (v: unknown): SeoFields => {
   const o = (v && typeof v === "object" ? v : {}) as Record<string, unknown>;
   return {
@@ -111,7 +113,7 @@ export function resolveSeo(input: {
     title,
     pageTitle,
     description: fields.description || auto.description,
-    image: fields.image || auto.image,
+    image: absoluteUrl(fields.image || auto.image),
     url: `${SITE_URL}${input.path === "/" ? "/" : input.path}`,
     noindex: !!fields.noindex,
     type: input.type ?? "website",

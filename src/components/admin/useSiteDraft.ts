@@ -1,13 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  fetchSiteRows,
-  fetchPostDrafts,
-  ADMIN_POST_COLUMNS,
-  saveSiteRow,
-} from "@/lib/admin-drafts";
+import { fetchSiteRows, saveSiteRow } from "@/lib/admin-drafts";
+import { discardSiteDraft, publishSiteRow } from "@/data/site";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 
 type Doc = Record<string, any>;
 export type SaveState = "idle" | "saving" | "saved" | "error";
@@ -61,26 +56,10 @@ export function useSiteDraft(key: string) {
   const publish = async (opts: { keep?: string[] } = {}) => {
     if (!doc) return;
     clearTimeout(timer.current);
-    let next = doc;
-    if (opts.keep?.length) {
-      const { data } = await supabase
-        .from("site_content")
-        .select("content")
-        .eq("key", key)
-        .maybeSingle();
-      const live = (data?.content ?? {}) as Doc;
-      next = { ...doc };
-      for (const k of opts.keep)
-        if (k in live) next[k] = live[k];
-        else delete next[k];
-    }
-    const { error } = await saveSiteRow(key, {
-      content: next,
-      draft: null,
-      updated_at: new Date().toISOString(),
-    });
-    if (error) {
-      toast.error(error.message);
+    try {
+      await publishSiteRow({ data: { key, doc, keep: opts.keep ?? [] } });
+    } catch (e) {
+      toast.error((e as Error).message);
       return;
     }
     setHasDraft(false);
@@ -93,17 +72,14 @@ export function useSiteDraft(key: string) {
   const discard = async (ask = true) => {
     if (ask && !confirm("Discard unpublished changes?")) return;
     clearTimeout(timer.current);
-    const { data, error } = await supabase
-      .from("site_content")
-      .update({ draft: null })
-      .eq("key", key)
-      .select("content")
-      .single();
-    if (error) {
-      toast.error(error.message);
+    let live: Doc;
+    try {
+      live = await discardSiteDraft({ data: { key } });
+    } catch (e) {
+      toast.error((e as Error).message);
       return;
     }
-    setDoc(data.content as Doc);
+    setDoc(live);
     setHasDraft(false);
     setSave("idle");
   };
