@@ -1,9 +1,19 @@
 import { createContext, useContext } from "react";
 import { queryOptions, useQueryClient } from "@tanstack/react-query";
 import { devSignIn, getMe } from "@/data/users";
+import { authClient } from "@/lib/auth-client";
 import { SITE_NAME } from "@/lib/seo";
 
-export type AdminUser = { id: string; email: string; first_name: string; last_name: string };
+export type AdminUser = {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: "pending" | "editor" | "admin" | "owner";
+};
+
+/** Admins (and the owner) manage users; editors do everything else. */
+export const isAdmin = (u: Pick<AdminUser, "role">) => u.role === "admin" || u.role === "owner";
 
 /** The signed-in, approved admin. Provided by AdminGate around every admin screen. */
 export const AdminUserContext = createContext<AdminUser | null>(null);
@@ -17,11 +27,12 @@ export function useAdminUser(): AdminUser {
 /** Who is signed in (and, in dev, the accounts to sign in as). */
 export const meQuery = queryOptions({ queryKey: ["admin", "me"], queryFn: () => getMe() });
 
-/** Signs out (dev placeholder) and returns to the sign-in screen. */
+/** Signs out (ends the session, and in local development the shortcut too). */
 export function useSignOut() {
   const qc = useQueryClient();
   return async () => {
-    await devSignIn({ data: { id: null } });
+    await authClient.signOut();
+    if (import.meta.env.DEV) await devSignIn({ data: { id: null } });
     // Refetch who's signed in first (the gate swaps to the sign-in screen), then drop the
     // previous user's Studio data so nothing of theirs is shown to the next one.
     await qc.invalidateQueries({ queryKey: meQuery.queryKey });

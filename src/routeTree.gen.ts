@@ -15,6 +15,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as AdminAccountRouteImport } from './routes/admin.account'
 import { Route as AdminFeedbackRouteImport } from './routes/admin.feedback'
 import { Route as AdminMediaRouteImport } from './routes/admin.media'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
@@ -23,6 +24,7 @@ import { Route as MediaSplatRouteImport } from './routes/media.$'
 import { Route as AdminPageSettingsKeyRouteImport } from './routes/admin.page-settings.$key'
 import { Route as AdminPagesIndexRouteImport } from './routes/admin.pages.index'
 import { Route as AdminPagesKeyRouteImport } from './routes/admin_.pages.$key'
+import { Route as ApiAuthSplatRouteImport } from './routes/api.auth.$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -52,6 +54,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAccountRoute = AdminAccountRouteImport.update({
+  id: '/account',
+  path: '/account',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminFeedbackRoute = AdminFeedbackRouteImport.update({
@@ -94,6 +101,11 @@ const AdminPagesKeyRoute = AdminPagesKeyRouteImport.update({
   path: '/admin/pages/$key',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -101,6 +113,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteWithChildren
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/admin/account': typeof AdminAccountRoute
   '/admin/feedback': typeof AdminFeedbackRoute
   '/admin/media': typeof AdminMediaRoute
   '/admin/settings': typeof AdminSettingsRoute
@@ -109,6 +122,7 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AdminIndexRoute
   '/admin/page-settings/$key': typeof AdminPageSettingsKeyRoute
   '/admin/pages/$key': typeof AdminPagesKeyRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
   '/admin/pages/': typeof AdminPagesIndexRoute
 }
 export interface FileRoutesByTo {
@@ -116,6 +130,7 @@ export interface FileRoutesByTo {
   '/$slug': typeof SlugRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/admin/account': typeof AdminAccountRoute
   '/admin/feedback': typeof AdminFeedbackRoute
   '/admin/media': typeof AdminMediaRoute
   '/admin/settings': typeof AdminSettingsRoute
@@ -124,6 +139,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminIndexRoute
   '/admin/page-settings/$key': typeof AdminPageSettingsKeyRoute
   '/admin/pages/$key': typeof AdminPagesKeyRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
   '/admin/pages': typeof AdminPagesIndexRoute
 }
 export interface FileRoutesById {
@@ -133,6 +149,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/admin/account': typeof AdminAccountRoute
   '/admin/feedback': typeof AdminFeedbackRoute
   '/admin/media': typeof AdminMediaRoute
   '/admin/settings': typeof AdminSettingsRoute
@@ -141,6 +158,7 @@ export interface FileRoutesById {
   '/admin/': typeof AdminIndexRoute
   '/admin/page-settings/$key': typeof AdminPageSettingsKeyRoute
   '/admin_/pages/$key': typeof AdminPagesKeyRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
   '/admin/pages/': typeof AdminPagesIndexRoute
 }
 export interface FileRouteTypes {
@@ -151,6 +169,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/robots.txt'
     | '/sitemap.xml'
+    | '/admin/account'
     | '/admin/feedback'
     | '/admin/media'
     | '/admin/settings'
@@ -159,6 +178,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/admin/page-settings/$key'
     | '/admin/pages/$key'
+    | '/api/auth/$'
     | '/admin/pages/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -166,6 +186,7 @@ export interface FileRouteTypes {
     | '/$slug'
     | '/robots.txt'
     | '/sitemap.xml'
+    | '/admin/account'
     | '/admin/feedback'
     | '/admin/media'
     | '/admin/settings'
@@ -174,6 +195,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/admin/page-settings/$key'
     | '/admin/pages/$key'
+    | '/api/auth/$'
     | '/admin/pages'
   id:
     | '__root__'
@@ -182,6 +204,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/robots.txt'
     | '/sitemap.xml'
+    | '/admin/account'
     | '/admin/feedback'
     | '/admin/media'
     | '/admin/settings'
@@ -190,6 +213,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/admin/page-settings/$key'
     | '/admin_/pages/$key'
+    | '/api/auth/$'
     | '/admin/pages/'
   fileRoutesById: FileRoutesById
 }
@@ -201,6 +225,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   MediaSplatRoute: typeof MediaSplatRoute
   AdminPagesKeyRoute: typeof AdminPagesKeyRoute
+  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -245,6 +270,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/admin/'
       preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/account': {
+      id: '/admin/account'
+      path: '/account'
+      fullPath: '/admin/account'
+      preLoaderRoute: typeof AdminAccountRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/feedback': {
@@ -303,10 +335,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminPagesKeyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 interface AdminRouteChildren {
+  AdminAccountRoute: typeof AdminAccountRoute
   AdminFeedbackRoute: typeof AdminFeedbackRoute
   AdminMediaRoute: typeof AdminMediaRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
@@ -317,6 +357,7 @@ interface AdminRouteChildren {
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminAccountRoute: AdminAccountRoute,
   AdminFeedbackRoute: AdminFeedbackRoute,
   AdminMediaRoute: AdminMediaRoute,
   AdminSettingsRoute: AdminSettingsRoute,
@@ -336,6 +377,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   MediaSplatRoute: MediaSplatRoute,
   AdminPagesKeyRoute: AdminPagesKeyRoute,
+  ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

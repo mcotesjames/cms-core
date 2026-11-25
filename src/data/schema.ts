@@ -104,15 +104,87 @@ export const media = sqliteTable("media", {
 export const ROLES = ["pending", "editor", "admin", "owner"] as const;
 export type Role = (typeof ROLES)[number];
 
-/** Studio accounts. Sign-in sessions arrive with Better Auth (Phase 3). */
+/** Timestamps Better Auth writes (stored as milliseconds; it reads and writes Date objects). */
+const ms = (name: string) => integer(name, { mode: "timestamp_ms" });
+const msNow = sql`(cast(unixepoch('subsecond') * 1000 as integer))`;
+
+/**
+ * Studio accounts: Better Auth's user model (`name`, `email`, `emailVerified`, `image`,
+ * `createdAt`, `updatedAt`) plus the CMS's own fields. Sign-up sets `firstName` / `lastName`;
+ * `role` and `approvedAt` are only ever written by the CMS (approval, roles), never by sign-up.
+ */
 export const users = sqliteTable("users", {
   id: text("id").primaryKey(),
+  name: text("name").notNull().default(""),
   email: text("email").notNull().unique(),
+  emailVerified: integer("email_verified", { mode: "boolean" }).notNull().default(false),
+  image: text("image"),
   firstName: text("first_name").notNull().default(""),
   lastName: text("last_name").notNull().default(""),
   role: text("role", { enum: ROLES }).notNull().default("pending"),
-  createdAt: text("created_at").notNull().default(now),
+  createdAt: ms("created_at").notNull().default(msNow),
+  updatedAt: ms("updated_at").notNull().default(msNow),
   approvedAt: text("approved_at"),
+});
+
+/** Better Auth: signed-in sessions (an HTTP-only cookie holds the token). */
+export const sessions = sqliteTable(
+  "sessions",
+  {
+    id: text("id").primaryKey(),
+    token: text("token").notNull().unique(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    expiresAt: ms("expires_at").notNull(),
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    createdAt: ms("created_at").notNull(),
+    updatedAt: ms("updated_at").notNull(),
+  },
+  (t) => [index("sessions_user").on(t.userId)],
+);
+
+/** Better Auth: sign-in methods per user. Email + password is provider "credential". */
+export const accounts = sqliteTable(
+  "accounts",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id").notNull(),
+    providerId: text("provider_id").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** Password hash (src/data/password.server.ts), for provider "credential". */
+    password: text("password"),
+    accessToken: text("access_token"),
+    refreshToken: text("refresh_token"),
+    idToken: text("id_token"),
+    accessTokenExpiresAt: ms("access_token_expires_at"),
+    refreshTokenExpiresAt: ms("refresh_token_expires_at"),
+    scope: text("scope"),
+    createdAt: ms("created_at").notNull(),
+    updatedAt: ms("updated_at").notNull(),
+  },
+  (t) => [index("accounts_user").on(t.userId)],
+);
+
+/** Better Auth: one-time tokens (password resets, email codes once email sending exists). */
+export const verifications = sqliteTable("verifications", {
+  id: text("id").primaryKey(),
+  identifier: text("identifier").notNull(),
+  value: text("value").notNull(),
+  expiresAt: ms("expires_at").notNull(),
+  createdAt: ms("created_at"),
+  updatedAt: ms("updated_at"),
+});
+
+/** Better Auth: rate-limit counters (sign-in and sign-up attempts per IP). */
+export const rateLimits = sqliteTable("rate_limits", {
+  id: text("id").primaryKey(),
+  key: text("key").notNull().unique(),
+  count: integer("count").notNull(),
+  lastRequest: integer("last_request").notNull(),
 });
 
 /** Feedback comments: a thread is a row with no `thread_id`; replies point at it. */

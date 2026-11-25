@@ -12,6 +12,10 @@ export type Bindings = {
   MEDIA: R2Bucket;
   /** "production" lets search engines in; anything else (staging, dev) keeps them out. */
   SITE_ENV?: string;
+  /** Signs sessions (a Worker secret; `.dev.vars` locally). */
+  BETTER_AUTH_SECRET?: string;
+  /** "false" makes the Studio invite-only (no sign-up form). */
+  SIGNUP_OPEN?: string;
 };
 
 let devProxy: Promise<{ env: Bindings }> | undefined;

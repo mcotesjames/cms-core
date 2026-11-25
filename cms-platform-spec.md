@@ -75,8 +75,13 @@ A site's code can only reach its own bindings, so client data is separated by in
 - SVG and non-image files upload unchanged.
 
 ### Auth
-- **Better Auth** on D1 (no hand-rolled sessions). Sessions are HTTP-only, `SameSite=Lax` cookies.
-- Sign-in method: open decision 1 (leaning email one-time code). Code requests and sign-in attempts are rate-limited per email and per IP.
+- **Better Auth** on D1 (no hand-rolled sessions): `src/data/auth.server.ts`, endpoints at `/api/auth/*` (never cached). Built per request, using the request's origin as its base address, so one build runs on localhost, staging and production. Sessions are HTTP-only, `SameSite=Lax` cookies (Secure on https), 7 days.
+- **Email + password** (decision 1). Passwords are hashed with PBKDF2-SHA256 through Web Crypto (`src/data/password.server.ts`, 100,000 iterations, stored with their iteration count so it can be raised). Minimum 10 characters. Until email sending exists, admins set temporary passwords (Users) and everyone can change their own (Your account); changing a password signs out other sessions.
+- **Sign-up** asks for first name, last name, email and password and creates a `pending` user; sign-up never sets a role. `SIGNUP_OPEN=false` makes a site invite-only.
+- **Rate limits** (stored in D1, so they hold across Workers): sign-in 5 per minute, sign-up 5 per hour, password change 5 per minute, per IP (`cf-connecting-ip`).
+- **Secret:** `BETTER_AUTH_SECRET`, a Worker secret per environment (`.dev.vars` locally); generated and piped into `wrangler secret put`, never printed.
+- **The owner** is set by `npm run user:owner -- <email> [--remote]` after that person signs up; there is no "first sign-up becomes owner".
+- **Local development** also has shortcut accounts without passwords (`db/seed.dev-users.sql`, `cms_dev_user` cookie), compiled out of builds and never seeded anywhere else.
 
 ### Local development
 - `npm run dev` with a local D1 database and R2 bucket (through Wrangler), seeded from `db/seed.sql` (fixture content only, never client data). Local has its own database (`preview_database_id`), never staging's.
@@ -657,17 +662,20 @@ Each phase leaves a site that works end to end, so every step can be checked aga
 Proves the stack on Cloudflare itself before anything else is built on it. Done by hand; Phase 8 scripts it.
 - ✅ Staging D1 database `cms-core-staging` (Western Europe) and R2 bucket `cms-core-staging-media` created in the MCJames account; the database ID is in `wrangler.jsonc`. R2 had to be enabled once in the dashboard (it needs a payment method on file, even within the free allowance).
 - ✅ Migrations applied and fixture content seeded on staging.
-- ✅ Staging Worker `cms-core-staging` deployed: https://cms-core-staging.mcotesjames-f69.workers.dev. Checked: pages render from the staging database, sitemap and robots served, edge cache MISS → HIT in Cloudflare's network, no console errors.
+- ✅ Staging Worker `cms-core-staging` deployed: https://cms-core-staging.mcotesjames.workers.dev. Checked: pages render from the staging database, sitemap and robots served, edge cache MISS → HIT in Cloudflare's network, no console errors.
 - ✅ Staging is never indexed: `SITE_ENV` (a Worker variable) is `staging`, so `robots.txt` disallows everything and every response carries `X-Robots-Tag: noindex, nofollow`; only `SITE_ENV=production` lets search engines in.
 - ✅ The Studio is closed on staging (no sign-in until Phase 3).
 - ✅ Local development keeps its own database: `preview_database_id: "local-dev"` in `wrangler.jsonc` separates it from staging's ID.
 
-### Phase 3 — Auth ☐
+### Phase 3 — Auth ✅
 Nothing deployed can be edited until this exists.
-- ☐ Better Auth sign-in (open decision 1), rate limiting per email and IP.
-- ☐ Roles in use: editor / admin chosen on approval; owner-only settings; Users screen updated.
-- ☐ Owner and the client's first admin seeded by script; open sign-up switchable per site.
-- ☐ The dev sign-in placeholder removed (or kept for local development only).
+- ✅ Better Auth sign-in with email + password (decision 1), on D1 (section 2 → Auth); rate limits per IP on sign-in, sign-up and password change. Per-email limits come with email codes.
+- ✅ Roles in use: approved as editor or admin; admins change roles, remove access (signing the person out) and set temporary passwords; the owner and your own account can't be changed. Users is admin-only (sidebar and server).
+- ✅ Your account: change your own name and password.
+- ✅ The owner set by script (`npm run user:owner -- <email> [--remote]`); `SIGNUP_OPEN=false` for invite-only sites. *The client's first admin: they sign up and the owner approves them as admin.*
+- ✅ The dev sign-in shortcuts kept for local development only (separate seed, compiled out of builds).
+- ✅ Staging: migrated, the seeded test accounts removed, `BETTER_AUTH_SECRET` set, deployed; sign-in endpoints checked on Cloudflare.
+- ☐ Email codes and password-reset emails, once Resend is set up (decision 1: email + password now; codes later).
 
 ### Phase 4 — Split platform and site ◐
 - ✅ The original build's features replaced by a plain skeleton site: homepage, pinned hero, Text and Image sections, plain header and footer (2026-11-25).
@@ -764,6 +772,7 @@ Still unchecked in the browser, for when entries return: replacing an image; add
 - **Rendering:** public pages render on the Worker and are edge-cached; Publish clears the affected URLs. No pre-rendering, rebuilds or deploy hooks.
 - **Access checks:** every server function goes through `studioFn` / `publicFn`; denied by default, enforced by a test.
 - **Auth library:** Better Auth on D1. **Schema and migrations:** Drizzle.
+- **Sign-in method (2026-11-25):** email + password now, hashed with PBKDF2 in the Worker; email codes and password-reset emails added once Resend is set up. Until then admins set temporary passwords.
 - **Media:** images resized in the browser before upload; stable R2 paths.
 - **Interactive embeds:** not in the platform; a site feature.
 - **Environments:** local to experiment, staging to preview features to the client, production for the public; each with its own database and bucket. Code goes up, content comes down; content goes up only once, at launch (`content:launch`). Content copies never include users, sessions or (by default) comments.
@@ -771,7 +780,7 @@ Still unchecked in the browser, for when entries return: replacing an image; add
 - **Multi-value fields:** JSON arrays in the platform (the original build's joined strings are not carried over).
 
 ### Open
-1. **Sign-in method:** email + password (passwords hashed in the Worker), or a one-time code by email (no passwords stored; needs Resend working before anyone can sign in). *Leaning: email code.*
+1. ~~Sign-in method~~ — decided (see Made).
 2. **Body text editing:** body text is written in the side panel rather than typed on the page. Keep it, or move it onto the canvas to match the canvas-first principle? *Applies to the entry editor and the Text section; settle when entries return (Phase 6).*
 3. **Image drop:** dropping an image onto an entry was lost in the original build when the editors were unified. Restore it? *Settle in Phase 6.*
 4. **Long-distance moves:** repeated ↑ to move a block far up a long entry or page. Acceptable until drag and drop (Phase 9)?
@@ -861,6 +870,9 @@ Still unchecked in the browser, for when entries return: replacing an image; add
 - **Re-apply drafts after background refetches** in a preview canvas.
 - **Draw editing canvases in the browser only** (`ssr: "data-only"` for `?studio=1`).
 - **Never put a button inside a `<label>`.**
+- **Keep one copy of zod.** Better Auth needs zod 4; with the project on zod 3 the production bundle resolved Better Auth's imports to zod 3 and every auth request failed (`.loose is not a function`), while `vite dev` worked. Test auth on the built Worker, not just the dev server.
+- **A built Worker reads `.dev.vars` from beside its config** (`.output/server/`), not the project root; copy it there for `wrangler dev` tests of a build.
+- **The workers.dev address follows the account's subdomain**, which can change (it did when R2 was enabled); use the address `wrangler deploy` prints.
 - *Supabase / Lovable only, kept for reference:* column-level SELECT breaks Postgres upserts; Lovable lockfiles point at a private package mirror.
 
 ---
@@ -869,9 +881,11 @@ Still unchecked in the browser, for when entries return: replacing an image; add
 
 Newest first. Each entry: date, what changed, how, and any follow-ups.
 
+- **2026-11-25 · Phase 3: sign-in · Claude** — Better Auth 1.7.20 on D1 with email + password (decision 1): migration `0001_auth` adds sessions, accounts, verifications and rate limits and rebuilds `users` for Better Auth (hand-edited to convert existing dates and to use D1's `defer_foreign_keys`). PBKDF2-SHA256 password hashing via Web Crypto; rate limits in D1; `/api/auth/*` route (never cached); sessions joined to `users` for roles in the access middleware. Studio: real sign-in and sign-up, Users with approve-as-editor/admin, role changes, remove access and temporary passwords (admin-only), Your account (name, password), sidebar shows Users to admins only. `npm run user:owner`. Seed split: content (`db/seed.sql`, every environment) and local-only shortcut accounts (`db/seed.dev-users.sql`). Project moved to zod 4 (one copy; zod 3 broke Better Auth in the production bundle). Staging migrated, test accounts removed, secret set, deployed at its new address https://cms-core-staging.mcotesjames.workers.dev (the account subdomain changed). Checked locally (sign-up → pending, approval, password sign-in, editor limits, rate limit, password change) and on the built Worker; staging endpoints respond. 84 tests. Follow-ups: email codes and reset emails with Resend; CPU time of password hashing on the free Workers plan (decision 8).
+
 - **2026-11-25 · Environments and content flow · Claude** — Docs only. Section 2 now defines the three environments (local to experiment, staging to preview features to the client, production for the public), the rule "code goes up, content comes down" with launch as the one upward content copy, what a content copy includes and excludes (never users, sessions or, by default, comments), and two sync tools: `content:launch` (staging → empty production, once, with a backup) and `content:pull` (production → staging or local). Added to Phase 7 (launch steps) and Phase 8 (the tools); recorded under Decisions → Made.
 
-- **2026-11-25 · Phase 2: first deployment · Claude** — Staging is live at https://cms-core-staging.mcotesjames-f69.workers.dev: D1 `cms-core-staging` (migrated, fixture seed), R2 `cms-core-staging-media` (R2 enabled in the dashboard), Worker `cms-core-staging` deployed from the build with `wrangler deploy --config .output/server/wrangler.json`. Added `SITE_ENV` (anything but `production` → `robots.txt` blocks everything and every response is `X-Robots-Tag: noindex, nofollow`). Local development keeps its own database (`preview_database_id: "local-dev"`); the existing local data was copied across. Checked on Cloudflare: pages from the staging database, sitemap, robots, edge cache MISS → HIT, Studio closed. New open decision 8 (one Cloudflare account or one per client; Workers Paid for real client sites). Follow-ups: staging has no media yet (uploads need sign-in, Phase 3); the deploy is manual until the Phase 8 scripts.
+- **2026-11-25 · Phase 2: first deployment · Claude** — Staging is live at https://cms-core-staging.mcotesjames.workers.dev: D1 `cms-core-staging` (migrated, fixture seed), R2 `cms-core-staging-media` (R2 enabled in the dashboard), Worker `cms-core-staging` deployed from the build with `wrangler deploy --config .output/server/wrangler.json`. Added `SITE_ENV` (anything but `production` → `robots.txt` blocks everything and every response is `X-Robots-Tag: noindex, nofollow`). Local development keeps its own database (`preview_database_id: "local-dev"`); the existing local data was copied across. Checked on Cloudflare: pages from the staging database, sitemap, robots, edge cache MISS → HIT, Studio closed. New open decision 8 (one Cloudflare account or one per client; Workers Paid for real client sites). Follow-ups: staging has no media yet (uploads need sign-in, Phase 3); the deploy is manual until the Phase 8 scripts.
 
 - **2026-11-25 · Phase 1 finished · Claude** — Replaced the Lovable Vite preset with a plain `vite.config.ts` (and removed the package). Tested the built Worker under `wrangler dev`: pages, sitemap, robots and media from local D1/R2, Studio closed. Added the edge cache (`src/data/cache.server.ts`, wired in `src/server.ts`): public pages keyed by a content version (`site_content.updated_at`, now written only when live content changes), media by address, Studio / server functions / canvas never cached, browsers always revalidate pages; verified hit → still a hit after a draft save → miss with new content after a publish. The spec's purge-on-publish plan changed to version keys, because the Cache API is per data centre (section 2 → Rendering). `robots.txt` is a server route from `SITE_URL`. Lint clean: the remaining `any` types typed through the page model's `Doc`, hook dependencies made explicit, Studio helpers (`meQuery`, `useSignOut`, `adminHead`) moved from `AdminGate.tsx` to `adminUser.ts`. 79 tests (5 new: cacheable requests, robots). Follow-ups: lazy images take no space until loaded (store image dimensions with Image sections); a real deployment is Phase 2.
 

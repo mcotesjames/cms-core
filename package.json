@@ -14,8 +14,9 @@
     "test:watch": "vitest",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "wrangler d1 migrations apply DB --local",
-    "db:seed": "wrangler d1 execute DB --local --file db/seed.sql",
-    "db:reset": "rm -rf .wrangler/state && npm run db:migrate && npm run db:seed"
+    "db:seed": "wrangler d1 execute DB --local --file db/seed.sql && wrangler d1 execute DB --local --file db/seed.dev-users.sql",
+    "db:reset": "rm -rf .wrangler/state && npm run db:migrate && npm run db:seed",
+    "user:owner": "node scripts/user-owner.mjs"
   },
   "overrides": {
     "rolldown": "1.2.1"
@@ -33,6 +34,7 @@
     "@tanstack/react-router": "1.170.41",
     "@tanstack/react-start": "1.168.60",
     "@tanstack/router-plugin": "1.168.42",
+    "better-auth": "1.7.20",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.575.0",
@@ -43,7 +45,7 @@
     "tailwindcss": "^4.2.1",
     "tw-animate-css": "^1.3.4",
     "vite-tsconfig-paths": "^6.0.2",
-    "zod": "^3.25.76"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20261125.1",

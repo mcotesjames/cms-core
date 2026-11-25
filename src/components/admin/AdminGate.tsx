@@ -5,62 +5,170 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SITE_NAME } from "@/lib/seo";
 import { devSignIn, type getMe, setMyName } from "@/data/users";
+import { authClient, authError } from "@/lib/auth-client";
 import { Logo } from "@/components/SiteChrome";
+const MIN_PASSWORD = 10;
 import { AdminUserContext, meQuery, useSignOut, type AdminUser } from "./adminUser";
 
+type DevAccounts = NonNullable<Awaited<ReturnType<typeof getMe>>["devAccounts"]>;
+
+const FIELD = "space-y-1.5 text-sm";
+
 /**
- * Sign-in placeholder until Better Auth (spec Phase 3). In `vite dev` you sign in as one of the
- * seeded accounts (db/seed.sql); a built site has no sign-in yet, so the Studio stays closed.
+ * Sign in or create an account (Better Auth, email + password). New accounts wait for an admin's
+ * approval. In local development the seeded accounts are also offered as one-click shortcuts.
  */
 function SignIn({
-  accounts,
+  signupOpen,
+  devAccounts,
 }: {
-  accounts: NonNullable<Awaited<ReturnType<typeof getMe>>["devAccounts"]> | null;
+  signupOpen: boolean;
+  devAccounts: DevAccounts | null;
 }) {
   const qc = useQueryClient();
-  const signIn = async (id: string) => {
+  const [mode, setMode] = useState<"in" | "up">("in");
+  const [form, setForm] = useState({ first: "", last: "", email: "", password: "" });
+  const [busy, setBusy] = useState(false);
+  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setForm({ ...form, [k]: e.target.value });
+  const done = () => qc.invalidateQueries({ queryKey: meQuery.queryKey });
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    const email = form.email.trim();
+    const { error } =
+      mode === "in"
+        ? await authClient.signIn.email({ email, password: form.password })
+        : await authClient.signUp.email({
+            email,
+            password: form.password,
+            name: `${form.first.trim()} ${form.last.trim()}`.trim(),
+            firstName: form.first.trim(),
+            lastName: form.last.trim(),
+          });
+    setBusy(false);
+    if (error) toast.error(authError(error));
+    else await done();
+  };
+
+  const devSignInAs = async (id: string) => {
     try {
       await devSignIn({ data: { id } });
       await qc.invalidateQueries();
-    } catch (e) {
-      toast.error((e as Error).message);
+    } catch (err) {
+      toast.error((err as Error).message);
     }
   };
-  if (!accounts)
-    return (
-      <Centered>
-        <BrandLogo />
-        <h1 className="text-lg">The Content Studio is closed</h1>
-        <p className="text-muted-foreground">
-          Sign-in isn't available on this site yet. It arrives with the next release.
-        </p>
-      </Centered>
-    );
+
   return (
-    <div className="flex min-h-screen items-center justify-center px-6">
-      <div className="w-full max-w-sm space-y-4">
-        <BrandLogo />
-        <h1 className="text-lg">Sign in to the Content Studio</h1>
-        <p className="text-sm text-muted-foreground">
-          Local development: choose a seeded account. Real sign-in arrives with Better Auth.
-        </p>
-        <ul className="space-y-2">
-          {accounts.map((a) => (
-            <li key={a.id}>
-              <Button
-                variant="outline"
-                className="h-auto w-full justify-between py-3"
-                onClick={() => signIn(a.id)}
+    <div className="flex min-h-screen items-center justify-center px-6 py-12">
+      <div className="w-full max-w-sm space-y-8">
+        <form onSubmit={submit} className="space-y-4">
+          <BrandLogo />
+          <h1 className="text-lg">
+            {mode === "in" ? "Sign in to the Content Studio" : "Create an account"}
+          </h1>
+          {mode === "up" && (
+            <div className="grid grid-cols-2 gap-3">
+              <label className={FIELD}>
+                <span>First name</span>
+                <Input
+                  required
+                  autoComplete="given-name"
+                  value={form.first}
+                  onChange={set("first")}
+                />
+              </label>
+              <label className={FIELD}>
+                <span>Last name</span>
+                <Input
+                  required
+                  autoComplete="family-name"
+                  value={form.last}
+                  onChange={set("last")}
+                />
+              </label>
+            </div>
+          )}
+          <label className={`block ${FIELD}`}>
+            <span>Email</span>
+            <Input
+              type="email"
+              required
+              autoComplete="email"
+              value={form.email}
+              onChange={set("email")}
+            />
+          </label>
+          <label className={`block ${FIELD}`}>
+            <span>Password</span>
+            <Input
+              type="password"
+              required
+              minLength={mode === "up" ? MIN_PASSWORD : undefined}
+              autoComplete={mode === "in" ? "current-password" : "new-password"}
+              value={form.password}
+              onChange={set("password")}
+            />
+            {mode === "up" && (
+              <span className="block text-xs text-muted-foreground">
+                At least {MIN_PASSWORD} characters.
+              </span>
+            )}
+          </label>
+          <Button type="submit" className="w-full" disabled={busy}>
+            {busy ? "One moment…" : mode === "in" ? "Sign in" : "Create account"}
+          </Button>
+          {signupOpen && (
+            <p className="text-center text-sm text-muted-foreground">
+              {mode === "in" ? "New here? " : "Already have an account? "}
+              <button
+                type="button"
+                className="text-foreground underline underline-offset-4"
+                onClick={() => setMode(mode === "in" ? "up" : "in")}
               >
-                <span className="text-left">
-                  <span className="block">{a.name}</span>
-                  <span className="block text-xs text-muted-foreground">{a.email}</span>
-                </span>
-                <span className="text-xs text-muted-foreground">{a.role}</span>
-              </Button>
-            </li>
-          ))}
-        </ul>
+                {mode === "in" ? "Create an account" : "Sign in"}
+              </button>
+            </p>
+          )}
+          {mode === "up" && (
+            <p className="text-xs text-muted-foreground">
+              New accounts are approved by an admin before they can use the Content Studio.
+            </p>
+          )}
+          {mode === "in" && (
+            <p className="text-xs text-muted-foreground">
+              Forgotten your password? Ask an admin to set a temporary one for you.
+            </p>
+          )}
+        </form>
+        {devAccounts && devAccounts.length > 0 && (
+          <section className="space-y-2 border-t border-border pt-6">
+            <h2 className="text-sm">Local development shortcuts</h2>
+            <p className="text-xs text-muted-foreground">
+              Seeded accounts without passwords. Only in <code>npm run dev</code>; never on a
+              deployed site.
+            </p>
+            <ul className="space-y-2">
+              {devAccounts.map((a) => (
+                <li key={a.id}>
+                  <Button
+                    variant="outline"
+                    className="h-auto w-full justify-between py-2"
+                    onClick={() => devSignInAs(a.id)}
+                  >
+                    <span className="text-left">
+                      <span className="block">{a.name}</span>
+                      <span className="block text-xs text-muted-foreground">{a.email}</span>
+                    </span>
+                    <span className="text-xs text-muted-foreground">{a.role}</span>
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
       </div>
     </div>
   );
@@ -149,12 +257,19 @@ function AdminAccess({ children }: { children: ReactNode }) {
   const value = useMemo<AdminUser | null>(
     () =>
       user
-        ? { id: user.id, email: user.email, first_name: user.firstName, last_name: user.lastName }
+        ? {
+            id: user.id,
+            email: user.email,
+            first_name: user.firstName,
+            last_name: user.lastName,
+            role: user.role,
+          }
         : null,
     [user],
   );
   if (isPending) return null;
-  if (!user) return <SignIn accounts={data?.devAccounts ?? null} />;
+  if (!user)
+    return <SignIn signupOpen={data?.signupOpen ?? true} devAccounts={data?.devAccounts ?? null} />;
   if (user.role === "pending")
     return (
       <Centered>

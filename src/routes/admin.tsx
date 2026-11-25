@@ -2,7 +2,7 @@ import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/SiteChrome";
 import { AdminGate } from "@/components/admin/AdminGate";
-import { adminHead, useSignOut } from "@/components/admin/adminUser";
+import { adminHead, isAdmin, useAdminUser, useSignOut } from "@/components/admin/adminUser";
 import { useComments, useProfiles } from "@/components/admin/useComments";
 
 export const Route = createFileRoute("/admin")({
@@ -19,7 +19,8 @@ const GROUPS = [
     label: "Settings",
     items: [
       { to: "/admin/settings", label: "Site settings" },
-      { to: "/admin/users", label: "Users" },
+      { to: "/admin/users", label: "Users", adminOnly: true },
+      { to: "/admin/account", label: "Your account" },
     ],
   },
 ] as const;
@@ -48,51 +49,62 @@ function Waiting() {
 }
 
 function AdminLayout() {
-  const signOut = useSignOut();
   return (
     <AdminGate>
       <div className="grid min-h-screen md:grid-cols-[232px_1fr]">
-        <aside className="border-b border-border p-6 md:border-b-0 md:border-r">
-          <div className="mb-8 flex items-center gap-3">
-            <Logo />
-            <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Studio</span>
-          </div>
-          <nav aria-label="Content Studio" className="space-y-6">
-            {GROUPS.map((g) => (
-              <div key={g.label}>
-                <p className="mb-2 text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                  {g.label}
-                </p>
-                <ul className="space-y-1">
-                  {g.items.map((it) => (
-                    <li key={it.label}>
-                      <Link
-                        to={it.to}
-                        activeOptions={{ includeSearch: false }}
-                        className="flex items-center justify-between gap-2 rounded-sm px-3 py-1.5 text-sm hover:bg-accent data-[status=active]:bg-primary data-[status=active]:text-primary-foreground"
-                      >
-                        {it.label}
-                        <Count to={it.to} />
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </nav>
-          <div className="mt-10 space-y-2 text-sm">
-            <Link to="/" className="block hover:text-primary">
-              View site
-            </Link>
-            <Button variant="outline" size="sm" onClick={signOut}>
-              Sign out
-            </Button>
-          </div>
-        </aside>
+        <Sidebar />
         <main className="min-w-0 p-6 md:p-10">
           <Outlet />
         </main>
       </div>
     </AdminGate>
+  );
+}
+
+/** The Studio sidebar. Users is shown to admins only (editors can't manage accounts). */
+function Sidebar() {
+  const signOut = useSignOut();
+  const me = useAdminUser();
+  return (
+    <aside className="border-b border-border p-6 md:border-b-0 md:border-r">
+      <div className="mb-8 flex items-center gap-3">
+        <Logo />
+        <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Studio</span>
+      </div>
+      <nav aria-label="Content Studio" className="space-y-6">
+        {GROUPS.map((g) => (
+          <div key={g.label}>
+            <p className="mb-2 text-xs uppercase tracking-[0.18em] text-muted-foreground">
+              {g.label}
+            </p>
+            <ul className="space-y-1">
+              {g.items
+                .filter((it) => !("adminOnly" in it && it.adminOnly) || isAdmin(me))
+                .map((it) => (
+                  <li key={it.label}>
+                    <Link
+                      to={it.to}
+                      activeOptions={{ includeSearch: false }}
+                      className="flex items-center justify-between gap-2 rounded-sm px-3 py-1.5 text-sm hover:bg-accent data-[status=active]:bg-primary data-[status=active]:text-primary-foreground"
+                    >
+                      {it.label}
+                      <Count to={it.to} />
+                    </Link>
+                  </li>
+                ))}
+            </ul>
+          </div>
+        ))}
+      </nav>
+      <div className="mt-10 space-y-2 text-sm">
+        <p className="text-xs text-muted-foreground">Signed in as {me.first_name || me.email}</p>
+        <Link to="/" className="block hover:text-primary">
+          View site
+        </Link>
+        <Button variant="outline" size="sm" onClick={signOut}>
+          Sign out
+        </Button>
+      </div>
+    </aside>
   );
 }

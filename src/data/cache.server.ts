@@ -26,8 +26,8 @@ export async function contentVersion(): Promise<string> {
   return memo.version;
 }
 
-/** Never cached: the Studio, server functions and the Studio canvas (`?studio=1`). */
-const PRIVATE = /^\/(admin|_serverFn|studio)(\/|$)/;
+/** Never cached: the Studio, server functions, sign-in (`/api`) and the Studio canvas (`?studio=1`). */
+const PRIVATE = /^\/(admin|_serverFn|api|studio)(\/|$)/;
 
 type Kind = "page" | "media";
 export function cacheKind(request: Request): Kind | null {
