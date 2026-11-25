@@ -41,12 +41,15 @@ export function FieldsEditor({
   onChange,
   ctx,
   errors = {},
+  onOpenItem,
 }: {
   defs: FieldDef[];
   values: Record<string, unknown>;
   onChange: (name: string, value: unknown) => void;
   ctx: FieldCtx;
   errors?: Record<string, string>;
+  /** Opens a group item in its own view (the page editor's drill-down), instead of inline. */
+  onOpenItem?: ((field: string, id: string) => void) | undefined;
 }) {
   const attached = attachedFields(defs);
   return (
@@ -61,6 +64,7 @@ export function FieldsEditor({
             onChange={(v) => onChange(d.name, v)}
             ctx={ctx}
             error={errors[d.name]}
+            onOpenItem={onOpenItem ? (id) => onOpenItem(d.name, id) : undefined}
             alt={
               d.type === "image" && d.alt
                 ? {
@@ -83,12 +87,14 @@ export function FieldInput({
   ctx,
   error,
   alt,
+  onOpenItem,
 }: {
   def: FieldDef;
   value: unknown;
   onChange: (v: unknown) => void;
   ctx: FieldCtx;
   error?: string | undefined;
+  onOpenItem?: ((id: string) => void) | undefined;
   /** An image's description, edited under the image. */
   alt?: { value: string; onChange: (v: string) => void; error?: string | undefined } | undefined;
 }) {
@@ -108,7 +114,16 @@ export function FieldInput({
       </div>
     );
   if (def.type === "group")
-    return <GroupInput def={def} value={value} onChange={onChange} ctx={ctx} error={error} />;
+    return (
+      <GroupInput
+        def={def}
+        value={value}
+        onChange={onChange}
+        ctx={ctx}
+        error={error}
+        onOpen={onOpenItem}
+      />
+    );
 
   let control: React.ReactNode;
   switch (def.type) {
@@ -355,12 +370,15 @@ function GroupInput({
   onChange,
   ctx,
   error,
+  onOpen,
 }: {
   def: Extract<FieldDef, { type: "group" }>;
   value: unknown;
   onChange: (v: unknown) => void;
   ctx: FieldCtx;
   error?: string | undefined;
+  /** When set, an item opens in its own view (the page editor) rather than expanding here. */
+  onOpen?: ((id: string) => void) | undefined;
 }) {
   const items = Array.isArray(value) ? (value as GroupItem[]) : [];
   const [open, setOpen] = useState<string | null>(null);
@@ -388,8 +406,8 @@ function GroupInput({
               <button
                 type="button"
                 className="flex min-w-0 flex-1 items-center gap-2 py-1 text-left text-sm"
-                aria-expanded={open === it.id}
-                onClick={() => setOpen(open === it.id ? null : it.id)}
+                {...(onOpen ? {} : { "aria-expanded": open === it.id })}
+                onClick={() => (onOpen ? onOpen(it.id) : setOpen(open === it.id ? null : it.id))}
               >
                 <ChevronDown
                   aria-hidden="true"
@@ -449,7 +467,8 @@ function GroupInput({
         onClick={() => {
           const item = newGroupItem(def, uid());
           set([...items, item]);
-          setOpen(item.id);
+          if (onOpen) onOpen(item.id);
+          else setOpen(item.id);
         }}
       >
         <Plus aria-hidden="true" />

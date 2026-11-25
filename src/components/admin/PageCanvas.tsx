@@ -24,6 +24,8 @@ import { Textarea } from "@/components/ui/textarea";
 
 import { StudioShell, PanelHeading, PanelField } from "@/components/admin/StudioShell";
 import { FieldsEditor, type FieldCtx } from "@/components/admin/fields/FieldInput";
+import { ItemPanel } from "@/components/admin/ItemPanel";
+import { itemAddress, parseItemAddress } from "@/lib/group-items";
 import type { FieldDef } from "@/lib/fields";
 import { MenuPanel } from "@/components/admin/MenuPanel";
 import { useCanvasComments } from "@/components/admin/useCanvasComments";
@@ -253,7 +255,9 @@ export function PageCanvas({
       if (m.type === "studio-edit") setField(m.field, m.value);
       if (m.type === "studio-select") {
         const b = describe(m.section);
-        select(b ? m.section : null, b?.menu && parseMenuItem(m.item) ? m.item! : null);
+        const gi = parseItemAddress(m.item);
+        if (gi && gi.page === key) select(`${key}:${gi.section}`, m.item!);
+        else select(b ? m.section : null, b?.menu && parseMenuItem(m.item) ? m.item! : null);
         setInserting(null);
         if (m.section || m.field) setPanel(true);
       }
@@ -297,6 +301,9 @@ export function PageCanvas({
     site: { ...liveSite, [key]: pageDraft.doc, settings: settingsDraft.doc },
   };
   const block = describe(selected);
+  // A repeating item of the selected section, opened in its own panel view.
+  const openItem =
+    selected && item && parseItemAddress(item)?.section === sectionId(selected) ? item : null;
   const valueOf = (field: string): unknown => {
     const f = parseField(field)!;
     return getPath(drafts[f.key]!.doc!, f.path);
@@ -459,6 +466,20 @@ export function PageCanvas({
             setItem(address);
           }}
         />
+      ) : block && selected && openItem ? (
+        <ItemPanel
+          sectionLabel={block.title}
+          address={openItem}
+          doc={pageDraft.doc}
+          ctx={fieldCtx}
+          update={(d) => pageDraft.update(d)}
+          setField={setField}
+          onOpen={(addr) => {
+            scrollNext.current = true;
+            setItem(addr);
+          }}
+          onBack={() => setItem(null)}
+        />
       ) : block && selected ? (
         <>
           <PanelHeading title={block.title} onDone={() => select(null)} />
@@ -470,6 +491,12 @@ export function PageCanvas({
               if (f) setField(f.field, v);
             }}
             ctx={fieldCtx}
+            onOpenItem={(name, id) => {
+              const f = block.fields.find((x) => x.def.name === name);
+              if (!f) return;
+              scrollNext.current = true;
+              setItem(itemAddress(f.field, id));
+            }}
           />
           {block.removable && (
             <Button variant="outline" size="sm" onClick={() => deleteSection(selected)}>

@@ -88,12 +88,4 @@ export function useSiteDraft(key: string) {
 }
 
 /** The value at a dotted path ("intro.title"), or undefined. */
-export function getPath(o: Doc, path: string): unknown {
-  return path
-    .split(".")
-    .reduce<unknown>((a, k) => (a != null && typeof a === "object" ? (a as Doc)[k] : undefined), o);
-}
-export function setPath(o: Doc, path: string, v: unknown): Doc {
-  const [k, ...rest] = path.split(".");
-  return { ...o, [k!]: rest.length ? setPath(o[k!] ?? {}, rest.join("."), v) : v };
-}
+export { getPath, setPath } from "@/lib/paths";

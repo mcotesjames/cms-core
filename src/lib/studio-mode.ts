@@ -84,7 +84,7 @@ export type StudioMessage =
 
 /** Splits a "key:path.to.field" CMS address. */
 export function parseField(field: string): { key: string; path: string } | null {
-  const m = field.match(/^([a-z_]+):([a-z0-9_.]+)$/i);
+  const m = field.match(/^([a-z_]+):([a-z0-9_.#-]+)$/i);
   return m ? { key: m[1]!, path: m[2]! } : null;
 }
 

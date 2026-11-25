@@ -11,6 +11,7 @@
 
 import type { PageKey } from "./pages";
 import { fieldDefault, type FieldDef } from "./fields";
+import { getPath } from "./paths";
 import { site } from "./site";
 import { TEMPLATES, templateDef, templateOf, type TemplateKey } from "./templates";
 export type { PageKey } from "./pages";
@@ -99,25 +100,14 @@ export type Doc = Record<string, any>;
 
 /** Reads a "key:path.to.field" CMS address from site content keyed by page; "" when missing. */
 export function readField(site: Doc | null | undefined, address: string): string {
-  const [key, path = ""] = address.split(":");
-  const v: unknown = path
-    .split(".")
-    .reduce<unknown>(
-      (a, k) => (a != null && typeof a === "object" ? (a as Doc)[k] : undefined),
-      site?.[key!],
-    );
+  const v = readValue(site, address);
   return typeof v === "string" ? v : "";
 }
 
 /** Reads any value (text, rich text, lists, links…) at a "key:path" CMS address; undefined when missing. */
 export function readValue(site: Doc | null | undefined, address: string): unknown {
   const [key, path = ""] = address.split(":");
-  return path
-    .split(".")
-    .reduce<unknown>(
-      (a, k) => (a != null && typeof a === "object" ? (a as Doc)[k] : undefined),
-      site?.[key!],
-    );
+  return getPath(site?.[key!], path);
 }
 
 export type SectionInstance = {
