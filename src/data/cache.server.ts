@@ -30,13 +30,28 @@ export function pageCacheKey(url: URL, version: string, build = BUILD_ID): strin
 const VERSION_TTL_MS = 2000;
 let memo: { version: string; at: number } | null = null;
 
-/** When live site content last changed. */
+/**
+ * When live site content or records last changed, plus whether the scheduled announcement is showing right
+ * now: its start and end times change the page without a content change, so the version flips
+ * then too (within the 2-second reuse window).
+ */
 export async function contentVersion(): Promise<string> {
   if (memo && Date.now() - memo.at < VERSION_TTL_MS) return memo.version;
   const { db } = await import("./db.server");
   const { siteContent } = await import("./schema");
-  const [row] = await (await db()).select({ v: max(siteContent.updatedAt) }).from(siteContent);
-  memo = { version: row?.v ?? "0", at: Date.now() };
+  const { eq } = await import("drizzle-orm");
+  const { bannerLive, readBanner } = await import("@/lib/global-settings");
+  const d = await db();
+  const { records } = await import("./schema");
+  const [[row], [rec], [settings]] = await Promise.all([
+    d.select({ v: max(siteContent.updatedAt) }).from(siteContent),
+    d.select({ v: max(records.publishedAt) }).from(records),
+    d.select({ data: siteContent.data }).from(siteContent).where(eq(siteContent.key, "settings")),
+  ]);
+  // Live content changes in either table (records publish, reorder and delete set published_at).
+  const latest = [row?.v ?? "0", rec?.v ?? "0"].sort().at(-1)!;
+  const banner = bannerLive(readBanner(settings?.data)) ? "b1" : "b0";
+  memo = { version: `${latest}.${banner}`, at: Date.now() };
   return memo.version;
 }
 

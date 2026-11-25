@@ -107,7 +107,8 @@ export function FieldInput({
         <LinkTargetEditor
           label={def.label}
           site={ctx.site}
-          value={(value as LinkTarget | null) ?? blankTarget("page")}
+          value={(value as LinkTarget | null) ?? (def.required ? blankTarget("page") : null)}
+          optional={!def.required}
           onChange={onChange}
         />
         <Help def={def} error={error} />

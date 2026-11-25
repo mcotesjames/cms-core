@@ -53,8 +53,14 @@ describe("flexible page sections", () => {
   });
 
   it("offers the platform's sections, then the site's own (all repeatable here)", () => {
-    expect(availableTypes("home", home)).toEqual(["text", "image", "callout", "features"]);
-    expect(availableTypes("page_abc", {})).toEqual(["text", "image", "callout", "features"]);
+    expect(availableTypes("home", home)).toEqual(["text", "image", "callout", "team", "features"]);
+    expect(availableTypes("page_abc", {})).toEqual([
+      "text",
+      "image",
+      "callout",
+      "team",
+      "features",
+    ]);
   });
 
   it("adds a section with its type's defaults after the chosen section", () => {

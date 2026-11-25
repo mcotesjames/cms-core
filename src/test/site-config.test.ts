@@ -93,7 +93,13 @@ describe("the fixture site's Landing template", () => {
 
   it("offers only its own sections", () => {
     const doc = newPageDoc("Spring offer", "landing", ids);
-    expect(availableTypes("page_offer", doc)).toEqual(["text", "image", "callout", "features"]);
+    expect(availableTypes("page_offer", doc)).toEqual([
+      "text",
+      "image",
+      "callout",
+      "team",
+      "features",
+    ]);
   });
 
   it("falls back to Standard for a template the site no longer has", () => {

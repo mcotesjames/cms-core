@@ -1,3 +1,5 @@
+import { readBrand } from "@/lib/global-settings";
+import { publishedRecordsQuery } from "@/lib/records-live";
 import { SITE_NAME } from "@/lib/seo";
 import { siteContentQuery } from "@/lib/site-content";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -73,8 +75,12 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
   );
 }
 
+/** The favicon set in Global settings, if any (root loader data is the site content). */
+const faviconOf = (data: unknown) =>
+  readBrand((data as { settings?: unknown } | undefined)?.settings).favicon;
+
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  head: () => ({
+  head: ({ loaderData }) => ({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
@@ -96,11 +102,21 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         href: "https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700&display=swap",
       },
       { rel: "stylesheet", href: appCss },
-      { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
+      // The favicon from Global settings → Logo & icon, or the platform's placeholder.
+      faviconOf(loaderData)
+        ? { rel: "icon", href: faviconOf(loaderData) }
+        : { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
     ],
   }),
   // Site content is loaded once here: every page, menu and the footer read it.
-  loader: ({ context }) => context.queryClient.ensureQueryData(siteContentQuery),
+  // Published records are loaded alongside, for sections that list or reference them.
+  loader: async ({ context }) => {
+    const [content] = await Promise.all([
+      context.queryClient.ensureQueryData(siteContentQuery),
+      context.queryClient.ensureQueryData(publishedRecordsQuery),
+    ]);
+    return content;
+  },
   shellComponent: RootShell,
   component: RootComponent,
   notFoundComponent: NotFoundComponent,

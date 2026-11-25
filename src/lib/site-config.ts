@@ -12,6 +12,19 @@
 import type { Menus } from "./menus";
 import { checkFieldDefs, type FieldDef } from "./fields";
 
+/** Settings keys the platform uses in the settings row (lib/global-settings.ts); a site can't declare these. */
+export const RESERVED_SETTINGS_KEYS = [
+  "general",
+  "footer",
+  "contact_email",
+  "footer_heading",
+  "footer_tagline",
+  "brand",
+  "banner",
+  "seo",
+  "forms",
+] as const;
+
 /** A field a section declares: one of the platform's field types (lib/fields.ts). */
 export type SiteSectionField = FieldDef;
 
@@ -41,6 +54,18 @@ export type SiteSection = {
   defaults: Record<string, unknown>;
   /** Templates whose pages may use it (default: every template). */
   templates?: string[];
+};
+
+/** A record type a site declares (lib/records.ts). */
+export type SiteRecordType = {
+  /** Singular and plural names: "Team member" / "Team". */
+  label: string;
+  plural: string;
+  fields: FieldDef[];
+  /** The text field that names a record in lists, pickers and references. */
+  titleField: string;
+  /** "manual" (the client sets the order) or by one of its fields. */
+  ordering: "manual" | { field: string; direction?: "asc" | "desc" };
 };
 
 /** A page template only this site has (spec section 6 → Page templates). */
@@ -80,6 +105,18 @@ export type SiteConfig = {
   };
   sections?: Record<string, SiteSection>;
   templates?: Record<string, SiteTemplate>;
+  /**
+   * The site's own Global settings groups (contact details, social links…): each is a tab on
+   * Settings → Global settings, stored as settings.<key>.<field>. Read them with `siteSettings()`.
+   */
+  settings?: Record<string, { label: string; note?: string; fields: FieldDef[] }>;
+  /**
+   * Record types (spec: Core scope → Records): reusable structured data without its own page
+   * (team members, services, logos…). Each has a list in the Studio's Records group.
+   */
+  recordTypes?: Record<string, SiteRecordType>;
+  /** IANA time zone for scheduled things such as the announcement (default "Europe/London"). */
+  timeZone?: string;
   /**
    * Top-level addresses of the site's own routes (files in src/site/routes), e.g. ["styleguide"].
    * Pages created in the Studio can't use them. A test checks every route file is listed.
@@ -126,6 +163,36 @@ export function validateSite(config: SiteConfig): SiteConfig {
       if (!t.sections.includes(s))
         fail(`template "${key}": required "${s}" must also be in sections.`);
     if (!t.sections.some((s) => sectionTypes.has(s))) fail(`template "${key}" offers no sections.`);
+  }
+  for (const [key, g] of Object.entries(config.settings ?? {})) {
+    if (!keyOk.test(key))
+      fail(`settings group "${key}": keys are lowercase letters, digits and _.`);
+    if ((RESERVED_SETTINGS_KEYS as readonly string[]).includes(key))
+      fail(`settings group "${key}" is used by the platform; pick another key.`);
+    const problems = checkFieldDefs(g.fields, `settings group "${key}"`);
+    if (problems[0]) fail(problems[0]);
+  }
+  for (const [key, t] of Object.entries(config.recordTypes ?? {})) {
+    if (!keyOk.test(key)) fail(`record type "${key}": keys are lowercase letters, digits and _.`);
+    const problems = checkFieldDefs(t.fields, `record type "${key}"`);
+    if (problems[0]) fail(problems[0]);
+    const title = t.fields.find((f) => f.name === t.titleField);
+    if (!title || title.type !== "text")
+      fail(`record type "${key}": titleField "${t.titleField}" must be one of its text fields.`);
+    const order = t.ordering;
+    if (order !== "manual" && !t.fields.some((f) => f.name === order.field))
+      fail(`record type "${key}": ordering field "${order.field}" isn't one of its fields.`);
+  }
+  for (const s of Object.values(sections))
+    for (const f of s.fields)
+      if (f.type === "reference" && !(f.to in (config.recordTypes ?? {})))
+        fail(`field "${f.name}": reference to unknown record type "${f.to}".`);
+  if (config.timeZone) {
+    try {
+      new Intl.DateTimeFormat("en-GB", { timeZone: config.timeZone });
+    } catch {
+      fail(`timeZone "${config.timeZone}" isn't a known time zone (e.g. "Europe/London").`);
+    }
   }
   for (const r of config.routes ?? [])
     if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(r)) fail(`route "${r}": use the address without slashes.`);

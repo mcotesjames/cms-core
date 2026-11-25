@@ -24,6 +24,7 @@ import { Route as AdminDotusersRouteImport } from './routes/admin.users'
 import { Route as MediaDotsplatRouteImport } from './routes/media.$'
 import { Route as AdminDotpageSettingsDotkeyRouteImport } from './routes/admin.page-settings.$key'
 import { Route as AdminDotpagesDotindexRouteImport } from './routes/admin.pages.index'
+import { Route as AdminDotrecordsDottypeRouteImport } from './routes/admin.records.$type'
 import { Route as Admin_DotpagesDotkeyRouteImport } from './routes/admin_.pages.$key'
 import { Route as ApiDotauthDotsplatRouteImport } from './routes/api.auth.$'
 
@@ -105,6 +106,11 @@ const AdminDotpagesDotindexRoute = AdminDotpagesDotindexRouteImport.update({
   path: '/pages/',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminDotrecordsDottypeRoute = AdminDotrecordsDottypeRouteImport.update({
+  id: '/records/$type',
+  path: '/records/$type',
+  getParentRoute: () => AdminRoute,
+} as any)
 const Admin_DotpagesDotkeyRoute = Admin_DotpagesDotkeyRouteImport.update({
   id: '/admin_/pages/$key',
   path: '/admin/pages/$key',
@@ -131,6 +137,7 @@ export interface FileRoutesByFullPath {
   '/media/$': typeof MediaDotsplatRoute
   '/admin/': typeof AdminDotindexRoute
   '/admin/page-settings/$key': typeof AdminDotpageSettingsDotkeyRoute
+  '/admin/records/$type': typeof AdminDotrecordsDottypeRoute
   '/admin/pages/$key': typeof Admin_DotpagesDotkeyRoute
   '/api/auth/$': typeof ApiDotauthDotsplatRoute
   '/admin/pages/': typeof AdminDotpagesDotindexRoute
@@ -149,6 +156,7 @@ export interface FileRoutesByTo {
   '/media/$': typeof MediaDotsplatRoute
   '/admin': typeof AdminDotindexRoute
   '/admin/page-settings/$key': typeof AdminDotpageSettingsDotkeyRoute
+  '/admin/records/$type': typeof AdminDotrecordsDottypeRoute
   '/admin/pages/$key': typeof Admin_DotpagesDotkeyRoute
   '/api/auth/$': typeof ApiDotauthDotsplatRoute
   '/admin/pages': typeof AdminDotpagesDotindexRoute
@@ -169,6 +177,7 @@ export interface FileRoutesById {
   '/media/$': typeof MediaDotsplatRoute
   '/admin/': typeof AdminDotindexRoute
   '/admin/page-settings/$key': typeof AdminDotpageSettingsDotkeyRoute
+  '/admin/records/$type': typeof AdminDotrecordsDottypeRoute
   '/admin_/pages/$key': typeof Admin_DotpagesDotkeyRoute
   '/api/auth/$': typeof ApiDotauthDotsplatRoute
   '/admin/pages/': typeof AdminDotpagesDotindexRoute
@@ -190,6 +199,7 @@ export interface FileRouteTypes {
     | '/media/$'
     | '/admin/'
     | '/admin/page-settings/$key'
+    | '/admin/records/$type'
     | '/admin/pages/$key'
     | '/api/auth/$'
     | '/admin/pages/'
@@ -208,6 +218,7 @@ export interface FileRouteTypes {
     | '/media/$'
     | '/admin'
     | '/admin/page-settings/$key'
+    | '/admin/records/$type'
     | '/admin/pages/$key'
     | '/api/auth/$'
     | '/admin/pages'
@@ -227,6 +238,7 @@ export interface FileRouteTypes {
     | '/media/$'
     | '/admin/'
     | '/admin/page-settings/$key'
+    | '/admin/records/$type'
     | '/admin_/pages/$key'
     | '/api/auth/$'
     | '/admin/pages/'
@@ -351,6 +363,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminDotpagesDotindexRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/records/$type': {
+      id: '/admin/records/$type'
+      path: '/records/$type'
+      fullPath: '/admin/records/$type'
+      preLoaderRoute: typeof AdminDotrecordsDottypeRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin_/pages/$key': {
       id: '/admin_/pages/$key'
       path: '/admin/pages/$key'
@@ -376,6 +395,7 @@ interface AdminRouteChildren {
   AdminDotusersRoute: typeof AdminDotusersRoute
   AdminDotindexRoute: typeof AdminDotindexRoute
   AdminDotpageSettingsDotkeyRoute: typeof AdminDotpageSettingsDotkeyRoute
+  AdminDotrecordsDottypeRoute: typeof AdminDotrecordsDottypeRoute
   AdminDotpagesDotindexRoute: typeof AdminDotpagesDotindexRoute
 }
 
@@ -387,6 +407,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminDotusersRoute: AdminDotusersRoute,
   AdminDotindexRoute: AdminDotindexRoute,
   AdminDotpageSettingsDotkeyRoute: AdminDotpageSettingsDotkeyRoute,
+  AdminDotrecordsDottypeRoute: AdminDotrecordsDottypeRoute,
   AdminDotpagesDotindexRoute: AdminDotpagesDotindexRoute,
 }
 

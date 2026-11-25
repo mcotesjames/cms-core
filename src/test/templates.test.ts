@@ -49,7 +49,13 @@ describe("page templates", () => {
   });
 
   it("Standard pages allow every section type, the site's included", () => {
-    expect(availableTypes("page_abc", aboutPage)).toEqual(["text", "image", "callout", "features"]);
+    expect(availableTypes("page_abc", aboutPage)).toEqual([
+      "text",
+      "image",
+      "callout",
+      "team",
+      "features",
+    ]);
   });
 
   it("a new Standard page starts with its title, an empty summary and no sections", () => {

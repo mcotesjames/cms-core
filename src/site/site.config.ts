@@ -53,6 +53,32 @@ export default defineSite({
         button_link: { kind: "page", page: "home" },
       },
     },
+    // Lists Team records: all, only featured ones, or hand-picked people (a reference field).
+    team: {
+      label: "Team",
+      repeatable: true,
+      fields: [
+        { name: "heading", label: "Heading", type: "text" },
+        {
+          name: "people",
+          label: "People",
+          help: "Pick people to show them in this order, or leave empty to list the team.",
+          type: "reference",
+          to: "person",
+          multiple: true,
+        },
+        { name: "featured_only", label: "Only featured people", type: "boolean" },
+        {
+          name: "limit",
+          label: "How many",
+          help: "Empty shows everyone.",
+          type: "number",
+          min: 1,
+          max: 24,
+        },
+      ],
+      defaults: { heading: "Our team" },
+    },
     // Exercises the richer field types: rich text and a repeating group.
     features: {
       label: "Features",
@@ -94,6 +120,50 @@ export default defineSite({
       },
     },
   },
+  // Records: reusable data edited in Records → Team, shown by the Team section.
+  recordTypes: {
+    person: {
+      label: "Team member",
+      plural: "Team",
+      titleField: "name",
+      ordering: "manual",
+      fields: [
+        { name: "name", label: "Name", type: "text", required: true },
+        { name: "role", label: "Role", type: "text" },
+        { name: "photo", label: "Photo", type: "image", alt: "photo_alt" },
+        { name: "photo_alt", label: "Photo description", type: "text" },
+        { name: "bio", label: "Short bio", type: "longText" },
+        {
+          name: "featured",
+          label: "Featured",
+          help: "Shown where only featured people are listed.",
+          type: "boolean",
+        },
+      ],
+    },
+  },
+  // The site's own Global settings tab (Settings → Global settings → Contact details).
+  settings: {
+    contact: {
+      label: "Contact details",
+      fields: [
+        { name: "phone", label: "Phone", type: "text" },
+        { name: "address", label: "Address", type: "longText" },
+        {
+          name: "social",
+          label: "Social links",
+          type: "group",
+          max: 6,
+          itemLabel: "label",
+          fields: [
+            { name: "label", label: "Label", type: "text", required: true },
+            { name: "link", label: "Link", type: "link" },
+          ],
+        },
+      ],
+    },
+  },
+  timeZone: "Europe/London",
   // The site's own routes (src/site/routes): Studio pages can't take these addresses.
   routes: ["styleguide"],
   templates: {
@@ -102,7 +172,7 @@ export default defineSite({
       description: "No page hero: starts with a Callout, then callouts, text and images.",
       hero: false,
       required: ["callout"],
-      sections: ["callout", "features", "text", "image"],
+      sections: ["callout", "features", "team", "text", "image"],
     },
   },
 });

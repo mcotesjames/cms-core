@@ -2,6 +2,7 @@ import type { ComponentType } from "react";
 import type { SiteSectionProps } from "@/lib/site-config";
 import { Callout } from "./Callout";
 import { Features } from "./Features";
+import { Team } from "./Team";
 
 /**
  * This site's section components, keyed like site.config.ts `sections` (a test checks every
@@ -11,4 +12,5 @@ import { Features } from "./Features";
 export const sectionComponents: Record<string, ComponentType<SiteSectionProps>> = {
   callout: Callout,
   features: Features,
+  team: Team,
 };

@@ -154,7 +154,7 @@ export function MenuPanel(p: {
             onChange={(e) => set((l) => ({ ...l, label: e.target.value }))}
           />
         </PanelField>
-        <LinkTargetEditor value={t} onChange={setTarget} site={ctx.site} />
+        <LinkTargetEditor value={t} onChange={(n) => n && setTarget(n)} site={ctx.site} />
         {!col && (
           <label className="flex items-center gap-2 text-sm">
             <Checkbox

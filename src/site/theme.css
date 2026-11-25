@@ -97,3 +97,20 @@
 .site-features-item h3 { font-size: 1.15rem; margin: 0 0 .5rem; }
 .site-features-item p { margin: 0; color: var(--muted-foreground); }
 
+/* Logo image (Global settings → Logo & icon): a fixed height so any logo fits the header. */
+.site-logo-img { display: block; height: 2rem; width: auto; max-width: 12rem; object-fit: contain; }
+
+/* Announcement bar (Global settings → Announcement), above the header. */
+.site-banner { padding: .6rem var(--page-gutter); background: var(--foreground); color: var(--background); text-align: center; font-size: .9rem; }
+.site-banner p { margin: 0; }
+.site-banner-link { text-decoration: underline; text-underline-offset: .15em; }
+
+/* Team (fixture section): a grid of people from the Team records. */
+.site-team h2 { font-size: var(--type-h2); line-height: 1.2; margin: 0 0 1.5rem; }
+.site-team-grid { display: grid; gap: 1.5rem; grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)); }
+.site-team-person img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: calc(var(--radius) * 3); margin-bottom: .75rem; background: var(--muted); }
+.site-team-person h3 { font-size: 1.1rem; margin: 0; }
+.site-team-role { margin: .15rem 0 .5rem; color: var(--muted-foreground); }
+.site-team-person p { margin: 0; }
+.site-team-empty { color: var(--muted-foreground); }
+

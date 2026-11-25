@@ -25,6 +25,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { StudioShell, PanelHeading, PanelField } from "@/components/admin/StudioShell";
 import { FieldsEditor, type FieldCtx } from "@/components/admin/fields/FieldInput";
 import { ItemPanel } from "@/components/admin/ItemPanel";
+import { useReferenceOptions } from "@/components/admin/useRecords";
 import { itemAddress, parseItemAddress } from "@/lib/group-items";
 import type { FieldDef } from "@/lib/fields";
 import { MenuPanel } from "@/components/admin/MenuPanel";
@@ -92,6 +93,39 @@ const FOOTER: Block = {
   ],
 };
 
+const BANNER: Block = {
+  title: "Announcement (site-wide)",
+  removable: false,
+  fields: [
+    {
+      field: "settings:banner.on",
+      def: { name: "on", label: "Show the announcement", type: "boolean" },
+    },
+    {
+      field: "settings:banner.text",
+      def: { name: "text", label: "Text", type: "text", maxLength: 140 },
+    },
+    {
+      field: "settings:banner.link",
+      def: { name: "link", label: "Links to (optional)", type: "link" },
+    },
+    {
+      field: "settings:banner.starts",
+      def: {
+        name: "starts",
+        label: "Starts",
+        help: "Optional. Site time.",
+        type: "date",
+        time: true,
+      },
+    },
+    {
+      field: "settings:banner.ends",
+      def: { name: "ends", label: "Ends", help: "Optional. Site time.", type: "date", time: true },
+    },
+  ],
+};
+
 /**
  * `focusComment` opens comment mode on that thread (linked from the Feedback list); `initial`
  * carries the device view and comment mode over from the page switcher.
@@ -111,6 +145,7 @@ export function PageCanvas({
   /** The page's name and address (built-in, or from the list of created pages). */
   const page = pagesReg.all.find((p) => p.key === key);
   const pageDraft = useSiteDraft(key);
+  const referenceOptions = useReferenceOptions();
   const settingsDraft = useSiteDraft("settings");
   /** Site-wide menus (main + footer), edited on the canvas like everything else. */
   const menusDraft = useSiteDraft("menus");
@@ -178,6 +213,7 @@ export function PageCanvas({
     if (!address) return null;
     if (address === `${key}:hero`) return heroBlock(key);
     if (address === "settings:footer") return FOOTER;
+    if (address === "settings:banner") return BANNER;
     if (address === "menus:main")
       return { title: "Main menu", removable: false, fields: [], menu: "main" };
     if (address === "menus:footer")
@@ -308,7 +344,7 @@ export function PageCanvas({
     const f = parseField(field)!;
     return getPath(drafts[f.key]!.doc!, f.path);
   };
-  const fieldCtx: FieldCtx = { site: menuCtx.site };
+  const fieldCtx: FieldCtx = { site: menuCtx.site, referenceOptions };
 
   const publish = async () => {
     // Search settings are saved live from the page's Settings; publishing keeps them.

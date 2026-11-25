@@ -22,6 +22,13 @@
       "when": 1795621045637,
       "tag": "0002_rename_owner_to_collaborator",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1795644084985,
+      "tag": "0003_records_publishing",
+      "breakpoints": true
     }
   ]
 }

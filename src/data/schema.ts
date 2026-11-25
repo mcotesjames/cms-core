@@ -68,6 +68,13 @@ export const records = sqliteTable(
     draft: json<JsonObject>("draft"),
     createdAt: text("created_at").notNull().default(now),
     updatedAt: text("updated_at").notNull().default(now),
+    /**
+     * When the live content (data, order, deletion) last changed; null until first published.
+     * The edge cache's content version includes the latest one (never touched by draft saves).
+     */
+    publishedAt: text("published_at"),
+    /** Deleted records are hidden, never dropped (spec section 11). */
+    deletedAt: text("deleted_at"),
   },
   (t) => [index("records_type_position").on(t.type, t.position)],
 );

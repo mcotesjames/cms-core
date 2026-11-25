@@ -5,15 +5,64 @@ import { isFilled, useShow } from "@/lib/show-if";
 import { useStudioMode } from "@/lib/studio-mode";
 import { SITE_NAME } from "@/lib/seo";
 import { site } from "@/lib/site";
+import { bannerLive, readBanner, readBrand } from "@/lib/global-settings";
+import { FieldLink } from "@/components/fields/FieldRender";
 import { columnAddress, linkAddress, resolveLink, resolveMenus, type MenuLink } from "@/lib/menus";
 
-/** The site's text wordmark (site.config.ts `brand.wordmark`, or its name). */
+/**
+ * The site's logo: the image from Global settings → Logo & icon when there is one, otherwise the
+ * text wordmark (site.config.ts `brand.wordmark`, or the site's name).
+ */
 export function Logo({ className = "" }: { className?: string }) {
+  const brand = readBrand(useSiteContent().settings);
+  if (brand.logo)
+    return (
+      <img
+        src={brand.logo}
+        alt={brand.logoAlt || SITE_NAME}
+        className={`site-logo-img ${className}`.trim()}
+      />
+    );
   return (
     <span className={`font-display text-2xl font-semibold tracking-tight ${className}`}>
       {site.brand?.wordmark ?? SITE_NAME}
       <span className="text-primary">.</span>
     </span>
+  );
+}
+
+/**
+ * The announcement bar (Global settings → Announcement): shown on every page while it's on and
+ * inside its start / end. In the Studio canvas it always shows (faded when it wouldn't be live)
+ * and its text is edited in place.
+ */
+export function Banner() {
+  const settings = useSiteContent().settings;
+  const studio = useStudioMode();
+  const b = readBanner(settings);
+  const live = bannerLive(b);
+  if (!studio && !live) return null;
+  if (studio && !b.on) return null;
+  return (
+    <div
+      className="site-banner"
+      role="region"
+      aria-label="Announcement"
+      {...(studio ? { "data-cms-section": "settings:banner" } : {})}
+      {...(studio && !live ? { "data-cms-broken": "" } : {})}
+    >
+      <p>
+        <span data-cms="settings:banner.text">{b.text}</span>
+        {isFilled(b.link) && (
+          <>
+            {" "}
+            <FieldLink value={b.link} className="site-banner-link">
+              Find out more
+            </FieldLink>
+          </>
+        )}
+      </p>
+    </div>
   );
 }
 
@@ -104,39 +153,42 @@ export function Header() {
 
   const close = () => setOpen(false);
   return (
-    <header ref={ref} className="site-header" data-open={open}>
-      <a href="#main" className="site-skip">
-        Skip to content
-      </a>
-      <Link to="/" className="site-brand" onClick={close}>
-        <Logo />
-      </Link>
-      <button
-        type="button"
-        className="site-nav-toggle"
-        aria-expanded={open}
-        aria-controls="site-main-nav"
-        onClick={() => setOpen((o) => !o)}
-      >
-        {open ? "Close" : "Menu"}
-      </button>
-      <nav
-        id="site-main-nav"
-        aria-label="Main"
-        className="site-nav"
-        {...(studio ? { "data-cms-section": "menus:main" } : {})}
-      >
-        {menus.main.map((l) => (
-          <MenuItem
-            key={l.id}
-            link={l}
-            ctx={ctx}
-            onClick={close}
-            className={l.button ? "site-nav-link site-nav-button" : "site-nav-link"}
-          />
-        ))}
-      </nav>
-    </header>
+    <>
+      <Banner />
+      <header ref={ref} className="site-header" data-open={open}>
+        <a href="#main" className="site-skip">
+          Skip to content
+        </a>
+        <Link to="/" className="site-brand" onClick={close}>
+          <Logo />
+        </Link>
+        <button
+          type="button"
+          className="site-nav-toggle"
+          aria-expanded={open}
+          aria-controls="site-main-nav"
+          onClick={() => setOpen((o) => !o)}
+        >
+          {open ? "Close" : "Menu"}
+        </button>
+        <nav
+          id="site-main-nav"
+          aria-label="Main"
+          className="site-nav"
+          {...(studio ? { "data-cms-section": "menus:main" } : {})}
+        >
+          {menus.main.map((l) => (
+            <MenuItem
+              key={l.id}
+              link={l}
+              ctx={ctx}
+              onClick={close}
+              className={l.button ? "site-nav-link site-nav-button" : "site-nav-link"}
+            />
+          ))}
+        </nav>
+      </header>
+    </>
   );
 }
 

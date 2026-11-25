@@ -2,6 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Footer, Header } from "@/components/SiteChrome";
 import { siteContentQuery } from "@/lib/site-content";
 import { pageSeo, seoHead } from "@/lib/seo";
+import { useSiteContent } from "@/lib/site-content";
+import { siteSettings } from "@/lib/global-settings";
+import { FieldLink } from "@/components/fields/FieldRender";
+import { useShow } from "@/lib/show-if";
 
 /**
  * /styleguide: a bespoke route only this site has (spec section 12 → extension points), mounted
@@ -50,6 +54,7 @@ function Styleguide() {
             ))}
           </ul>
         </section>
+        <ContactDetails />
         <section className="site-section site-text">
           <h2>Type</h2>
           <p style={{ fontSize: "var(--type-h1)", lineHeight: 1.05, margin: 0 }}>Heading 1</p>
@@ -60,5 +65,38 @@ function Styleguide() {
       </main>
       <Footer />
     </>
+  );
+}
+
+type Social = { id: string; label?: unknown; link?: unknown };
+
+/** The site's own Global settings group (Contact details), as any site component would read it. */
+function ContactDetails() {
+  const show = useShow();
+  const c = siteSettings(useSiteContent().settings, "contact");
+  const social = Array.isArray(c["social"]) ? (c["social"] as Social[]) : [];
+  if (!show(c["phone"], c["address"], social)) return null;
+  return (
+    <section className="site-section site-text">
+      <h2>Contact details</h2>
+      <div className="site-text-body">
+        {show(c["phone"]) && <p>{String(c["phone"] ?? "")}</p>}
+        {show(c["address"]) && (
+          <p style={{ whiteSpace: "pre-line" }}>{String(c["address"] ?? "")}</p>
+        )}
+        {social.length > 0 && (
+          <p>
+            {social.map((s, i) => (
+              <span key={s.id}>
+                {i > 0 && " · "}
+                <FieldLink value={s.link} keepText>
+                  {String(s.label ?? "")}
+                </FieldLink>
+              </span>
+            ))}
+          </p>
+        )}
+      </div>
+    </section>
   );
 }

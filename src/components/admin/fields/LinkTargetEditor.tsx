@@ -16,9 +16,13 @@ export function LinkTargetEditor({
   onChange,
   site,
   label = "Links to",
+  optional = false,
 }: {
-  value: LinkTarget;
-  onChange: (t: LinkTarget) => void;
+  /** null = no link (only when `optional`). */
+  value: LinkTarget | null;
+  onChange: (t: LinkTarget | null) => void;
+  /** Offers "No link" as the first choice. */
+  optional?: boolean;
   /** Site content (live merged with drafts) for the page and section lists. */
   site: Record<string, unknown>;
   label?: string;
@@ -43,9 +47,12 @@ export function LinkTargetEditor({
       <PanelField label={label}>
         <select
           className={SELECT}
-          value={t.kind}
-          onChange={(e) => onChange(blankTarget(e.target.value as LinkTarget["kind"]))}
+          value={t?.kind ?? ""}
+          onChange={(e) =>
+            onChange(e.target.value ? blankTarget(e.target.value as LinkTarget["kind"]) : null)
+          }
         >
+          {optional && <option value="">No link</option>}
           {LINK_KINDS.map((k) => (
             <option key={k.kind} value={k.kind}>
               {k.label}
@@ -53,12 +60,12 @@ export function LinkTargetEditor({
           ))}
         </select>
       </PanelField>
-      {t.kind === "page" && (
+      {t?.kind === "page" && (
         <PanelField label="Page">
           {pages(t.page, (page) => onChange({ kind: "page", page }))}
         </PanelField>
       )}
-      {t.kind === "section" && (
+      {t?.kind === "section" && (
         <>
           <PanelField label="Page">
             {pages(t.page, (page) => onChange({ kind: "section", page, section: "" }))}
@@ -79,7 +86,7 @@ export function LinkTargetEditor({
           </PanelField>
         </>
       )}
-      {t.kind === "url" && (
+      {t?.kind === "url" && (
         <PanelField label="Web address (opens in a new tab)">
           <Input
             value={t.url}
@@ -88,7 +95,7 @@ export function LinkTargetEditor({
           />
         </PanelField>
       )}
-      {t.kind === "email" && (
+      {t?.kind === "email" && (
         <PanelField label="Email address">
           <Input
             type="email"

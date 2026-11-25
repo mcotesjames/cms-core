@@ -1,6 +1,7 @@
 import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import {
   CircleUser,
+  Database,
   ExternalLink,
   Image,
   LayoutTemplate,
@@ -13,6 +14,7 @@ import { Logo } from "@/components/SiteChrome";
 import { AdminGate } from "@/components/admin/AdminGate";
 import { adminHead, isAdmin, useAdminUser, useSignOut } from "@/components/admin/adminUser";
 import { useComments, useProfiles } from "@/components/admin/useComments";
+import { recordTypes } from "@/lib/records";
 
 export const Route = createFileRoute("/admin")({
   ssr: false,
@@ -30,12 +32,25 @@ const GROUPS = [
   {
     label: "Settings",
     items: [
-      { to: "/admin/settings", label: "Site settings", icon: Settings },
+      { to: "/admin/settings", label: "Global settings", icon: Settings },
       { to: "/admin/users", label: "Users", icon: Users, adminOnly: true },
       { to: "/admin/account", label: "Your account", icon: CircleUser },
     ],
   },
 ] as const;
+
+type NavItem = { to: string; label: string; icon: typeof Database; adminOnly?: boolean };
+
+/** The sidebar groups, with a Records group listing the site's record types (when it has any). */
+function groups(): Array<{ label: string; items: readonly NavItem[] }> {
+  const types = recordTypes();
+  if (!types.length) return [...GROUPS];
+  const records = {
+    label: "Records",
+    items: types.map((t) => ({ to: `/admin/records/${t.key}`, label: t.plural, icon: Database })),
+  };
+  return [...GROUPS.slice(0, 2), records, ...GROUPS.slice(2)];
+}
 
 /** Badge after a sidebar link: open comments for the signed-in user, or accounts waiting for approval. */
 function Count({ to }: { to: string }) {
@@ -85,7 +100,7 @@ function Sidebar() {
         <Logo className="studio-wordmark" />
       </div>
       <nav aria-label="Content Studio">
-        {GROUPS.map((g) => (
+        {groups().map((g) => (
           <div key={g.label} className="studio-group">
             <p className="studio-caption">{g.label}</p>
             <ul className="space-y-px">
