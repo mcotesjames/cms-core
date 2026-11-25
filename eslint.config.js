@@ -45,7 +45,7 @@ export default tseslint.config(
   },
   {
     // The site's own code, the one platform gateway to it, and tests may import from src/site/.
-    files: ["src/site/**", "src/lib/site.ts", "src/test/**"],
+    files: ["src/site/**", "src/lib/site.ts", "src/lib/site-sections.ts", "src/test/**"],
     rules: {
       "no-restricted-imports": [
         "error",

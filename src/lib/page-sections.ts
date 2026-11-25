@@ -9,9 +9,8 @@
  *   section_data: { [id]: { type, ...fields } }  — each section's own content
  */
 
-import type { ComponentType } from "react";
 import type { PageKey } from "./pages";
-import type { SiteSectionProps } from "./site-config";
+import { fieldDefault, type FieldDef } from "./fields";
 import { site } from "./site";
 import { TEMPLATES, templateDef, templateOf, type TemplateKey } from "./templates";
 export type { PageKey } from "./pages";
@@ -20,25 +19,18 @@ export { isPageKey } from "./pages";
 /** A section type key: a platform section ("text", "image") or one of the site's. */
 export type SectionType = string;
 
-export type SectionField = {
-  name: string;
-  label: string;
-  multi?: boolean;
-  image?: boolean;
-  /** A choice from fixed options, shown as a select. */
-  options?: Array<{ value: string; label: string }>;
-};
+/** A section's field: one of the platform's field types (lib/fields.ts). */
+export type SectionField = FieldDef;
 
 export type SectionDef = {
   label: string;
   /** Repeatable sections can appear many times on a page; others once. */
   repeatable: boolean;
   fields: SectionField[];
-  defaults: Record<string, string>;
+  /** Starting values by field name; missing ones use the field type's default. */
+  defaults: Record<string, unknown>;
   /** Templates whose pages may use it (default: every template that allows it). */
   templates?: string[];
-  /** A site section's renderer (platform sections are rendered by PageSections itself). */
-  component?: ComponentType<SiteSectionProps>;
 };
 
 const PLATFORM_SECTIONS: Record<SectionType, SectionDef> = {
@@ -46,8 +38,8 @@ const PLATFORM_SECTIONS: Record<SectionType, SectionDef> = {
     label: "Text",
     repeatable: true,
     fields: [
-      { name: "heading", label: "Heading" },
-      { name: "body", label: "Text", multi: true },
+      { name: "heading", label: "Heading", type: "text" },
+      { name: "body", label: "Text", type: "longText" },
     ],
     defaults: { heading: "A heading", body: "Write your text here." },
   },
@@ -55,12 +47,13 @@ const PLATFORM_SECTIONS: Record<SectionType, SectionDef> = {
     label: "Image",
     repeatable: true,
     fields: [
-      { name: "image_url", label: "Image", image: true },
-      { name: "alt", label: "Image description (alt text)" },
-      { name: "caption", label: "Caption" },
+      { name: "image_url", label: "Image", type: "image", alt: "alt" },
+      { name: "alt", label: "Image description (alt text)", type: "text" },
+      { name: "caption", label: "Caption", type: "text" },
       {
         name: "width",
         label: "Width",
+        type: "choice",
         options: [
           { value: "contained", label: "Contained: within the text column" },
           { value: "full", label: "Full width: edge to edge" },
@@ -84,6 +77,15 @@ export function sectionDef(type: SectionType): SectionDef {
   return SECTION_TYPES[type] ?? { label: type, repeatable: true, fields: [], defaults: {} };
 }
 
+/** A new section's values: each field's default, then the section's own defaults. */
+export function sectionDefaults(type: SectionType): Record<string, unknown> {
+  const def = sectionDef(type);
+  return {
+    ...Object.fromEntries(def.fields.map((f) => [f.name, fieldDefault(f)])),
+    ...def.defaults,
+  };
+}
+
 /** Whether a page on this template may hold this section type. */
 export function allowedOn(template: TemplateKey, type: SectionType): boolean {
   const def = sectionDef(type);
@@ -105,6 +107,17 @@ export function readField(site: Doc | null | undefined, address: string): string
       site?.[key!],
     );
   return typeof v === "string" ? v : "";
+}
+
+/** Reads any value (text, rich text, lists, links…) at a "key:path" CMS address; undefined when missing. */
+export function readValue(site: Doc | null | undefined, address: string): unknown {
+  const [key, path = ""] = address.split(":");
+  return path
+    .split(".")
+    .reduce<unknown>(
+      (a, k) => (a != null && typeof a === "object" ? (a as Doc)[k] : undefined),
+      site?.[key!],
+    );
 }
 
 export type SectionInstance = {
@@ -182,7 +195,7 @@ export function insertSection(
   const sections = [...order.slice(0, at), id, ...order.slice(at)];
   const section_data = {
     ...(doc["section_data"] ?? {}),
-    [id]: { type, ...sectionDef(type).defaults },
+    [id]: { type, ...sectionDefaults(type) },
   };
   return { doc: { ...doc, sections, section_data }, id };
 }

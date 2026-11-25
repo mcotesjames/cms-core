@@ -72,7 +72,7 @@ export function StudioShell(p: {
             <span className="studio-dot" aria-hidden="true" />
             {p.status}
           </span>
-          <span className="studio-help hidden sm:inline" aria-live="polite">
+          <span className="studio-help hidden truncate xl:inline" aria-live="polite">
             {p.saving ? "Saving…" : p.dirty ? "Draft saved" : ""}
           </span>
         </div>

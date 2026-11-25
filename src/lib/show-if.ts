@@ -7,12 +7,22 @@
  * filled; empty text shows a faint "Empty — hidden on the site" placeholder (styles.css).
  */
 import { useStudioMode } from "./studio-mode";
+import { richTextPlain } from "./fields";
 
-/** True when a value has content: non-blank text, a non-empty list, or any other non-null value. */
+/**
+ * True when a value has content: non-blank text, a non-empty list, rich text with words in it, a
+ * link with somewhere to go, or any other non-null value.
+ */
 export function isFilled(value: unknown): boolean {
   if (value == null || value === false) return false;
   if (typeof value === "string") return value.trim() !== "";
   if (Array.isArray(value)) return value.some(isFilled);
+  if (typeof value === "object") {
+    const o = value as { type?: unknown; kind?: unknown; url?: unknown; email?: unknown };
+    if (o.type === "doc") return richTextPlain(value) !== "";
+    if (o.kind === "url") return isFilled(o.url);
+    if (o.kind === "email") return isFilled(o.email);
+  }
   return true;
 }
 

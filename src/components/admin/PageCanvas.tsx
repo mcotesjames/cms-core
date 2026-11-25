@@ -23,6 +23,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
 import { StudioShell, PanelHeading, PanelField } from "@/components/admin/StudioShell";
+import { FieldsEditor, type FieldCtx } from "@/components/admin/fields/FieldInput";
+import type { FieldDef } from "@/lib/fields";
 import { MenuPanel } from "@/components/admin/MenuPanel";
 import { useCanvasComments } from "@/components/admin/useCanvasComments";
 import { usePages } from "@/components/admin/usePages";
@@ -55,16 +57,11 @@ import {
   type PageKey,
   type SectionType,
 } from "@/lib/page-sections";
-import { sectionDef } from "@/lib/page-sections";
+import { sectionDef, sectionDefaults } from "@/lib/page-sections";
 import { templateDef } from "@/lib/templates";
 
-type F = {
-  field: string;
-  label: string;
-  multi?: boolean | undefined;
-  image?: boolean | undefined;
-  options?: Array<{ value: string; label: string }> | undefined;
-};
+/** A field in the side panel: its declaration and its CMS address ("key:path"). */
+type F = { def: FieldDef; field: string };
 type Block = {
   title: string;
   fields: F[];
@@ -77,16 +74,19 @@ const heroBlock = (key: PageKey): Block => ({
   title: "Hero",
   removable: false,
   fields: [
-    { field: `${key}:intro.title`, label: "Title" },
-    { field: `${key}:intro.summary`, label: "Intro", multi: true },
+    { field: `${key}:intro.title`, def: { name: "title", label: "Title", type: "text" } },
+    { field: `${key}:intro.summary`, def: { name: "summary", label: "Intro", type: "longText" } },
   ],
 });
 const FOOTER: Block = {
   title: "Footer (site-wide)",
   removable: false,
   fields: [
-    { field: "settings:footer_heading", label: "Heading" },
-    { field: "settings:footer_tagline", label: "Tagline", multi: true },
+    { field: "settings:footer_heading", def: { name: "heading", label: "Heading", type: "text" } },
+    {
+      field: "settings:footer_tagline",
+      def: { name: "tagline", label: "Tagline", type: "longText" },
+    },
   ],
 };
 
@@ -188,21 +188,16 @@ export function PageCanvas({
       title: def.label,
       // Sections the page's template requires can be moved but not deleted.
       removable: !isRequired(key, pageDraft.doc, inst.id),
-      fields: def.fields.map((f) => ({
-        field: inst.fields[f.name]!,
-        label: f.label,
-        multi: f.multi,
-        image: f.image,
-        options: f.options,
-      })),
+      fields: def.fields.map((f) => ({ def: f, field: inst.fields[f.name]! })),
     };
   };
 
-  const setField = (field: string, value: string) => {
+  const setField = (field: string, value: unknown) => {
     const f = parseField(field);
     const d = f && drafts[f.key];
     if (!f || !d?.doc) return;
-    if (String(getPath(d.doc, f.path) ?? "") !== value) d.update(setPath(d.doc, f.path, value));
+    if (JSON.stringify(getPath(d.doc, f.path) ?? "") !== JSON.stringify(value ?? ""))
+      d.update(setPath(d.doc, f.path, value));
   };
 
   const addSection = (type: SectionType) => {
@@ -232,13 +227,14 @@ export function PageCanvas({
   /** Asks before switching when that would clear anything beyond the untouched starting sections. */
   const chooseTemplate = (to: TemplateKey) => {
     if (!pageDraft.doc || to === templateOf(key, pageDraft.doc)) return;
-    const own = (pageDraft.doc["section_data"] ?? {}) as Record<string, Record<string, string>>;
+    const own = (pageDraft.doc["section_data"] ?? {}) as Record<string, Record<string, unknown>>;
     const untouched = resolveSections(key, pageDraft.doc).every((s) => {
       if (!isRequired(key, pageDraft.doc, s.id)) return false;
-      const start: Record<string, string> = { type: s.type, ...sectionDef(s.type).defaults };
+      const start: Record<string, unknown> = { type: s.type, ...sectionDefaults(s.type) };
       const data = own[s.id] ?? {};
       const names = new Set([...Object.keys(start), ...Object.keys(data)]);
-      return [...names].every((n) => (data[n] ?? "") === (start[n] ?? ""));
+      const same = (a: unknown, b: unknown) => JSON.stringify(a ?? "") === JSON.stringify(b ?? "");
+      return [...names].every((n) => same(data[n], start[n]));
     });
     if (untouched) applyTemplate(to);
     else setPendingTemplate(to);
@@ -301,10 +297,11 @@ export function PageCanvas({
     site: { ...liveSite, [key]: pageDraft.doc, settings: settingsDraft.doc },
   };
   const block = describe(selected);
-  const valueOf = (field: string) => {
+  const valueOf = (field: string): unknown => {
     const f = parseField(field)!;
-    return (getPath(drafts[f.key]!.doc!, f.path) as string) ?? "";
+    return getPath(drafts[f.key]!.doc!, f.path);
   };
+  const fieldCtx: FieldCtx = { site: menuCtx.site };
 
   const publish = async () => {
     // Search settings are saved live from the page's Settings; publishing keeps them.
@@ -465,56 +462,15 @@ export function PageCanvas({
       ) : block && selected ? (
         <>
           <PanelHeading title={block.title} onDone={() => select(null)} />
-          {block.fields.map((f) => (
-            <PanelField key={f.field} label={f.label}>
-              {f.options ? (
-                <Select value={valueOf(f.field)} onValueChange={(v) => setField(f.field, v)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {f.options.map((o) => (
-                      <SelectItem key={o.value} value={o.value}>
-                        {o.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : f.image ? (
-                <div className="space-y-2">
-                  {valueOf(f.field) && (
-                    <img
-                      src={valueOf(f.field)}
-                      alt=""
-                      className="max-h-40 rounded-md object-cover"
-                    />
-                  )}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setImageField(f.field);
-                      fileInput.current?.click();
-                    }}
-                  >
-                    {valueOf(f.field) ? "Replace image" : "Add image"}
-                  </Button>
-                </div>
-              ) : f.multi ? (
-                <Textarea
-                  rows={4}
-                  value={valueOf(f.field)}
-                  onChange={(e) => setField(f.field, e.target.value)}
-                />
-              ) : (
-                <Input
-                  value={valueOf(f.field)}
-                  onChange={(e) => setField(f.field, e.target.value)}
-                />
-              )}
-            </PanelField>
-          ))}
+          <FieldsEditor
+            defs={block.fields.map((f) => f.def)}
+            values={Object.fromEntries(block.fields.map((f) => [f.def.name, valueOf(f.field)]))}
+            onChange={(name, v) => {
+              const f = block.fields.find((x) => x.def.name === name);
+              if (f) setField(f.field, v);
+            }}
+            ctx={fieldCtx}
+          />
           {block.removable && (
             <Button variant="outline" size="sm" onClick={() => deleteSection(selected)}>
               Delete section

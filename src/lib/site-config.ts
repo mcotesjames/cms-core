@@ -9,37 +9,38 @@
  * beside the platform's by vite.config.ts), theme (`src/site/theme.css`). Record types arrive with
  * the records feature (Phase 6).
  */
-import type { ComponentType } from "react";
 import type { Menus } from "./menus";
+import { checkFieldDefs, type FieldDef } from "./fields";
 
-/** A field the Studio's side panel edits for a section (same shape as platform sections). */
-export type SiteSectionField = {
-  name: string;
-  label: string;
-  multi?: boolean;
-  image?: boolean;
-  options?: Array<{ value: string; label: string }>;
-};
+/** A field a section declares: one of the platform's field types (lib/fields.ts). */
+export type SiteSectionField = FieldDef;
 
 /** What a site section's component receives. */
 export type SiteSectionProps = {
-  /** Each field's current value (live on the site, the draft in the Studio canvas). */
-  values: Record<string, string>;
+  /**
+   * Each field's current value (live on the site, the draft in the Studio canvas), shaped by its
+   * field type: text is a string, rich text a RichDoc (render it with <RichText>), a link a
+   * LinkTarget (resolve it with <FieldLink>), and so on (lib/fields.ts).
+   */
+  values: Record<string, unknown>;
   /** Each field's CMS address, for `data-cms` / `data-cms-image` so it's editable in place. */
   cms: Record<string, string>;
 };
 
-/** A designed section only this site has. */
+/**
+ * A designed section only this site has. Its React component is registered in
+ * src/site/sections/index.ts under the same key (kept out of this config so the config stays
+ * plain data that platform modules can read while components import platform helpers).
+ */
 export type SiteSection = {
   label: string;
   /** Can appear more than once on a page. */
   repeatable: boolean;
   fields: SiteSectionField[];
-  defaults: Record<string, string>;
+  /** Starting values for a new section, by field name (missing = the field type's default). */
+  defaults: Record<string, unknown>;
   /** Templates whose pages may use it (default: every template). */
   templates?: string[];
-  /** Renders it, on the live site and in the Studio canvas. Must hide empty fields (useShow). */
-  component: ComponentType<SiteSectionProps>;
 };
 
 /** A page template only this site has (spec section 6 → Page templates). */
@@ -107,8 +108,9 @@ export function validateSite(config: SiteConfig): SiteConfig {
     if (!keyOk.test(key)) fail(`section "${key}": keys are lowercase letters, digits and _.`);
     if ((PLATFORM_SECTION_TYPES as readonly string[]).includes(key))
       fail(`section "${key}" is a platform section; pick another key.`);
+    const problems = checkFieldDefs(s.fields, `section "${key}"`);
+    if (problems[0]) fail(problems[0]);
     const names = new Set(s.fields.map((f) => f.name));
-    if (names.has("type")) fail(`section "${key}": a field can't be called "type".`);
     for (const d of Object.keys(s.defaults))
       if (!names.has(d)) fail(`section "${key}": default "${d}" isn't one of its fields.`);
     for (const t of s.templates ?? [])

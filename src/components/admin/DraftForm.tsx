@@ -1,41 +1,14 @@
-import { useState } from "react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { uploadMedia } from "@/lib/media";
+import { FieldsEditor } from "./fields/FieldInput";
+import { useSiteContent } from "@/lib/site-content";
+import type { FieldDef } from "@/lib/fields";
 import { getPath, setPath, useSiteDraft } from "./useSiteDraft";
 import type { Doc } from "@/lib/page-sections";
 
-export type DraftField = { path: string; label: string; type?: "text" | "textarea" | "image" };
+/** A field on a one-form screen: a field type declaration plus where it's stored in the row. */
+export type DraftField = FieldDef & { path: string };
 export type DraftSection = { title: string; fields: DraftField[]; note?: string };
-
-function ImageField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const [busy, setBusy] = useState(false);
-  return (
-    <div className="space-y-2">
-      {value && <img src={value} alt="" className="h-28 w-auto rounded-md object-cover" />}
-      <Input
-        type="file"
-        accept="image/*"
-        disabled={busy}
-        onChange={async (e) => {
-          const f = e.target.files?.[0];
-          if (!f) return;
-          setBusy(true);
-          try {
-            onChange(await uploadMedia(f));
-          } catch (err) {
-            toast.error((err as Error).message);
-          } finally {
-            setBusy(false);
-          }
-        }}
-      />
-    </div>
-  );
-}
 
 export function PublishBar({
   hasDraft,
@@ -87,6 +60,7 @@ export function DraftForm({
   extra?: ((doc: Doc, update: (d: Doc) => void) => React.ReactNode) | undefined;
 }) {
   const { doc, update, publish, discard, hasDraft, save } = useSiteDraft(contentKey);
+  const liveSite = useSiteContent() as unknown as Record<string, unknown>;
   if (!doc) return <p className="text-muted-foreground">Loading…</p>;
   return (
     <div className="max-w-3xl">
@@ -99,22 +73,15 @@ export function DraftForm({
         <section key={s.title} className="mb-8 space-y-5 border-t border-border pt-6">
           <h2 className="studio-section-title">{s.title}</h2>
           {s.note && <p className="text-sm text-muted-foreground">{s.note}</p>}
-          {s.fields.map((f) => {
-            const v = String(getPath(doc, f.path) ?? "");
-            const set = (nv: string) => update(setPath(doc, f.path, nv));
-            return (
-              <label key={f.path} className="block space-y-2">
-                <span className="studio-field-label">{f.label}</span>
-                {f.type === "textarea" ? (
-                  <Textarea rows={4} value={v} onChange={(e) => set(e.target.value)} />
-                ) : f.type === "image" ? (
-                  <ImageField value={v} onChange={set} />
-                ) : (
-                  <Input value={v} onChange={(e) => set(e.target.value)} />
-                )}
-              </label>
-            );
-          })}
+          <FieldsEditor
+            defs={s.fields}
+            values={Object.fromEntries(s.fields.map((f) => [f.name, getPath(doc, f.path)]))}
+            onChange={(name, v) => {
+              const f = s.fields.find((x) => x.name === name);
+              if (f) update(setPath(doc, f.path, v));
+            }}
+            ctx={{ site: liveSite }}
+          />
         </section>
       ))}
     </div>

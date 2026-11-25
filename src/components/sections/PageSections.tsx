@@ -3,6 +3,7 @@ import { useSiteContent } from "@/lib/site-content";
 import { useStudioMode } from "@/lib/studio-mode";
 import {
   readField,
+  readValue,
   sectionDef,
   resolveSections,
   type Doc,
@@ -13,13 +14,23 @@ import { TEMPLATES, templateOf } from "@/lib/templates";
 import { sectionAnchor } from "@/lib/menus";
 import { useShow } from "@/lib/show-if";
 import { Footer, Header } from "@/components/SiteChrome";
+import { siteSectionComponents } from "@/lib/site-sections";
 import { templateDef } from "@/lib/templates";
 
 /** A section's field values (live, or the draft inside the Studio canvas). */
+/** Each field's text value (platform sections, whose fields are all text). */
 function useFieldValues(inst: SectionInstance): Record<string, string> {
   const site = useSiteContent() as unknown as Doc;
   return Object.fromEntries(
     Object.entries(inst.fields).map(([name, addr]) => [name, readField(site, addr)]),
+  );
+}
+
+/** Each field's value as stored, shaped by its field type (site sections). */
+function useRawValues(inst: SectionInstance): Record<string, unknown> {
+  const site = useSiteContent() as unknown as Doc;
+  return Object.fromEntries(
+    Object.entries(inst.fields).map(([name, addr]) => [name, readValue(site, addr)]),
   );
 }
 
@@ -74,8 +85,8 @@ function ImageSection({ inst }: { inst: SectionInstance }) {
 
 /** A site's own section (site.config.ts `sections`): its component gets values and CMS addresses. */
 function SiteSection({ inst }: { inst: SectionInstance }) {
-  const values = useFieldValues(inst);
-  const Component = sectionDef(inst.type).component;
+  const values = useRawValues(inst);
+  const Component = siteSectionComponents[inst.type];
   return Component ? <Component values={values} cms={inst.fields} /> : null;
 }
 

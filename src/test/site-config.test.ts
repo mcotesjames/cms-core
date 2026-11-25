@@ -7,14 +7,12 @@ import { availableTypes, isRequired, removeSection, resolveSections } from "@/li
 import { newPageDoc, uniqueSlug } from "@/lib/pages";
 import { templateDef, templateOf } from "@/lib/templates";
 
-const Noop = () => null;
 const base: SiteConfig = { name: "Example", url: "https://example.com" };
 const section = {
   label: "Banner",
   repeatable: true,
-  fields: [{ name: "text", label: "Text" }],
+  fields: [{ name: "text", label: "Text", type: "text" as const }],
   defaults: { text: "" },
-  component: Noop,
 };
 
 describe("defineSite() checks the site's config", () => {
@@ -62,7 +60,11 @@ describe("defineSite() checks the site's config", () => {
       validateSite({
         ...base,
         sections: {
-          banner: { ...section, fields: [{ name: "type", label: "Type" }], defaults: {} },
+          banner: {
+            ...section,
+            fields: [{ name: "type", label: "Type", type: "text" as const }],
+            defaults: {},
+          },
         },
       }),
     ).toThrow(/type/);
@@ -91,13 +93,20 @@ describe("the fixture site's Landing template", () => {
 
   it("offers only its own sections", () => {
     const doc = newPageDoc("Spring offer", "landing", ids);
-    expect(availableTypes("page_offer", doc)).toEqual(["text", "image", "callout"]);
+    expect(availableTypes("page_offer", doc)).toEqual(["text", "image", "callout", "features"]);
   });
 
   it("falls back to Standard for a template the site no longer has", () => {
     expect(templateOf("page_old", { template: "retired" })).toBe("standard");
     expect(templateDef("retired").label).toBe("Standard");
     expect(uniqueSlug("Spring offer", [])).toBe("spring-offer");
+  });
+});
+
+describe("the site's section components", () => {
+  it("exist for every declared section, and only for those", async () => {
+    const { sectionComponents } = await import("@/site/sections");
+    expect(Object.keys(sectionComponents).sort()).toEqual(Object.keys(site.sections ?? {}).sort());
   });
 });
 

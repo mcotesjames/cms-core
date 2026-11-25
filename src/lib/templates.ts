@@ -14,7 +14,7 @@
 import { SECTION_TYPES, type Doc, type SectionType } from "./page-sections";
 import { isFixedPage, type PageKey } from "./pages";
 import { site } from "./site";
-import { sectionDef } from "./page-sections";
+import { sectionDef, sectionDefaults } from "./page-sections";
 
 /** A template key: "standard" or one of the site's own. */
 export type TemplateKey = string;
@@ -78,13 +78,13 @@ export function templateOf(page: PageKey, doc: Doc | null | undefined): Template
 export function startingSections(
   to: TemplateKey,
   newId: () => string,
-): { sections: string[]; section_data: Record<string, Record<string, string>> } {
+): { sections: string[]; section_data: Record<string, Record<string, unknown>> } {
   const sections: string[] = [];
-  const section_data: Record<string, Record<string, string>> = {};
+  const section_data: Record<string, Record<string, unknown>> = {};
   for (const type of templateDef(to).required) {
     const id = newId();
     sections.push(id);
-    section_data[id] = { type, ...sectionDef(type).defaults };
+    section_data[id] = { type, ...sectionDefaults(type) };
   }
   return { sections, section_data };
 }

@@ -517,7 +517,8 @@ migrations/
 - **Shared renderers:** the same section components render on the live site and the canvas. A site section's component receives `{ values, cms }`: each field's current value (live, or the draft in the canvas) and its CMS address for `data-cms` / `data-cms-image`.
 - **Platform code never imports from `src/site/`**; it reads the site only through `@/lib/site`. ESLint (`no-restricted-imports`) enforces it; site files, `lib/site.ts` and tests are exempt. This is what lets a platform update ship to every site.
 - **Routes from both folders** are mounted with TanStack virtual file routes (`vite.config.ts`: `rootRoute("routes/__root.tsx", [physical("", "routes"), physical("", "site/routes")])`), confirmed with TanStack Start 1.168. Site routes list their top-level addresses in `routes` in site config, so pages created in the Studio can't take them (a test checks every route file is listed).
-- **Theme layering:** platform tokens sit in `@layer base`; `src/site/theme.css` is imported after them, so a site overrides any token with a plain `:root { … }` rule. The Studio's dark theme (`:root:has(.studio)`) is unaffected.
+- **Theme layering:** platform tokens sit in `@layer base`; `src/site/theme.css` is imported after them, so a site overrides any token with a plain `:root { … }` rule. The Studio's own theme (`:root:has(.studio)`) is unaffected.
+- **Two gateways:** `@/lib/site` gives platform code the site's config (plain data), and `@/lib/site-sections` gives the page renderer the site's section components (`src/site/sections/index.ts`). They're separate because components import platform helpers, which read the config: one combined import would be circular.
 - **Editors are keyed by what they edit** (`<Editor key={id} />`).
 
 ---
@@ -539,8 +540,9 @@ export default defineSite({
     defaults: (settings) => ({ main: [...], footer: [...] }),  // until the Studio edits them
   },
   sections: {
-    // key: { label, repeatable, fields: [{ name, label, multi?, image?, options? }],
-    //        defaults: { field: value }, templates?: [templateKey], component }
+    // key: { label, repeatable, fields: FieldDef[] (lib/fields.ts),
+    //        defaults: { field: value }, templates?: [templateKey] }
+    // Each section's React component is registered under the same key in src/site/sections/index.ts.
   },
   templates: {
     // key: { label, description, hero: boolean, required: [type], sections: [type] }
@@ -549,11 +551,28 @@ export default defineSite({
 });
 ```
 
-`defineSite()` checks the config when the code loads, so a bad config fails the build and the tests with a message naming the problem (`site.config.ts: …`): the address isn't a bare https origin; a section or template key isn't lowercase or reuses a platform key (`text`, `image`, `standard`); a section has a field called `type` or a default for a field it doesn't have, or names an unknown template; a template names an unknown section, requires one it doesn't offer, or offers none; a route isn't a bare slug; media quality is outside 0–1.
+`defineSite()` checks the config when the code loads, so a bad config fails the build and the tests with a message naming the problem (`site.config.ts: …`): the address isn't a bare https origin; a section or template key isn't lowercase or reuses a platform key (`text`, `image`, `standard`); a section's fields break the field rules (`checkFieldDefs`: names, reserved `type` / `id`, duplicates, unknown types, a choice without options, nested groups, an image's alt field missing) or it has a default for a field it doesn't have, or names an unknown template; a template names an unknown section, requires one it doesn't offer, or offers none; a route isn't a bare slug; media quality is outside 0–1.
 
 **Still to come** (added to the contract with the features that need them): `contentTypes` and `recordTypes` (Phase 6), `pages` (more built-in pages), `settings` fields, `seo` (title suffix, organisation), `auth` options, `studio.home`, logo files and fonts in `brand`.
 
-**Field types:** today a section field is text, multi-line text (`multi`), an image (`image`) or a choice (`options`). Planned: `richText`, `file`, `link` (points at a target, as menus do), `multiSelect`, `date`, `number`, `boolean`, `reference` (to a record or entry), `list` (repeating group).
+**Field types (built, Phase 6):** `src/lib/fields.ts` defines them; every field is `{ name, label, type, help?, required? }` plus its type's options:
+
+| `type` | Value stored | Options | Studio control |
+|---|---|---|---|
+| `text` | string | `maxLength`, `default` | input |
+| `longText` | string | `default` | textarea |
+| `richText` | RichDoc (structured JSON: paragraphs, H2/H3, bold, italic, links, lists) | — | TipTap with a fixed toolbar |
+| `image` | URL (`/media/…`) | `alt` (sibling text field, edited under the image, required when an image is set), `decorative` | upload |
+| `file` | URL | `accept` | upload |
+| `link` | LinkTarget (page, section, URL, email) | — | the menus' link picker |
+| `choice` | string, or string[] with `multiple` | `options` (set in code), `default` | select / tick boxes |
+| `date` | `YYYY-MM-DD` (or with time) | `time` | date input |
+| `number` | number | `min`, `max`, `default` | number input |
+| `boolean` | boolean | `default` | switch |
+| `reference` | string[] of ids | `to`, `multiple` | picker (once records and entries exist) |
+| `group` | items `[{ id, …fields }]` | `fields` (no nested groups), `min`, `max`, `itemLabel` | list of small forms: add, reorder, remove |
+
+Values are validated from the declaration (`validateValues` / `fieldSchema`, zod); a site component renders rich text with `<RichText>` and links with `<FieldLink>` (`components/fields/FieldRender.tsx`), and empty values are hidden (`isFilled` understands rich text and links). Server-side enforcement arrives with the features that save single things (records, entries, forms); page sections are drafts and publish as edited.
 
 ---
 
@@ -711,9 +730,9 @@ A decision phase, no code. **The platform ships features, not content:** no pred
 
 **Not in the platform:** a visual content-type builder · site search (site-level when needed) · e-commerce, memberships, payments · complex redirect patterns (regular expressions) · WordPress import as a feature (a one-off script per launch, Phase 7) · **multilingual in v1** (adding it later means a schema change and migration across every site, accepted knowingly).
 
-### Phase 6 — Core features ☐
+### Phase 6 — Core features ◐
 Builds the core signed off in Phase 5 (section 14 → Made → Core scope), each declared per site through `site.config.ts`; the fixture site uses every one so CI proves them.
-- ☐ **Field types:** text, long text, rich text (fixed toolbar, structured data), image, file, link, choice / multiple choice (fixed or Studio-editable option lists), date, number, yes/no, reference, repeating group; label, help, required, default; validation on screen and server from the declaration. Option-list screens in the Studio.
+- ✅ **Field types** (2026-11-25): all twelve types (section 9), declarations checked by `defineSite()`, validation from the declaration, one editor per type in the side panel and on settings screens (`components/admin/fields/`), public renderers for rich text and links. The fixture site's Features section uses rich text and a repeating group. (Studio-editable option lists were built, then dropped as not useful enough: choice options are set in code.) Still to come with later features: the reference picker (needs records/entries) and server-side enforcement where single things are saved.
 - ☐ **Content types:** `contentTypes` in site config; list, visual entry editor (blocks: rich text, image, quote, video, gallery, divider; body typed on the page with a floating toolbar), Settings screen; detail and archive routes, Content feed section, RSS, sitemap, SEO. The original build's article editor (git history, commit `5b54fbe`) is the starting point.
 - ☐ **Records:** `recordTypes` in site config (name, fields, title field, ordering); list, form drawer with preview card, drafts + Publish, comments; record list section; reference fields; delete warns where used.
 - ☐ **Repeating items in sections:** a section's repeating group edited on the canvas (add, reorder, delete, min/max), with the page's draft.
@@ -786,7 +805,7 @@ Still unchecked in the browser, for when entries return: replacing an image; add
 - **Devices:** desktop-only editing; tablet and mobile via the toggle.
 - **Drag and drop:** files can be dropped onto the Media screen (Phase 6); never onto canvas elements (images are placed by click or pick). Reordering by drag is Phase 9; ↑ / ↓ until then.
 - **Core scope (Phase 5, 2026-11-25):** the platform ships **features, not content**: no predefined sections, record types or content types; each site declares its own in `site.config.ts`, and structure stays in code (no visual content-type builder: designs depend on field names, a schema stored in the database would drift between environments, and field changes need content migrations).
-  - **Field types:** text, long text, rich text (fixed toolbar: bold, italic, link, bulleted/numbered lists, H2/H3; stored as structured data, never raw HTML), image (alt text required unless decorative), file, link (the menus' picker: page, section, entry, URL, email), choice / multiple choice, date (optional time), number, yes/no, reference (one or many records or entries; hidden when the target is unpublished or deleted), repeating group. Every field: label, help text, required/optional, default, validation on screen and server generated from the declaration. A choice field is either **fixed** (in code: design choices such as contained / full width) or an **editable option list** (managed in the Studio: categories, tags, services). Not offered: colour pickers, HTML/code fields, per-field styling.
+  - **Field types:** text, long text, rich text (fixed toolbar: bold, italic, link, bulleted/numbered lists, H2/H3; stored as structured data, never raw HTML), image (alt text required unless decorative), file, link (the menus' picker: page, section, entry, URL, email), choice / multiple choice, date (optional time), number, yes/no, reference (one or many records or entries; hidden when the target is unpublished or deleted), repeating group. Every field: label, help text, required/optional, default, validation on screen and server generated from the declaration. A choice field's options are set in code. *(Studio-editable option lists were signed off, built and then dropped on 2026-11-25 as not useful enough.)* Not offered: colour pickers, HTML/code fields, per-field styling.
   - **Content types:** entries with their own page. Declared per site: names, address, template (Article by default; sites add their own), extra fields, categories/tags, archive on/off. Built-in fields: title, web address, summary, featured image, publish date, author, SEO, draft/published. Studio: list, visual editor with blocks (rich text, image, quote, video, gallery, divider), Settings screen, a "Content" sidebar group. Site: detail page, paginated archive with category filters, Content feed section, RSS, sitemap, SEO. Body text is typed on the page with a floating toolbar; author is a plain name, or a pick from a people record type when the site has one. Not in v1: visitor comments, approval workflows.
   - **Records:** structured, reusable data without its own page. A record type needs only a name, its fields, a title field and an ordering (manual or by a field); "featured" and "category" are ordinary fields. Studio: list, form drawer with a preview card, drafts + Publish, comments, a "Records" sidebar group. Site: a record list section (all or filtered by any yes/no or choice field, count, optional visitor filters; design per site) and reference fields. Deleting warns and lists where a record is used.
   - **Repeating items in sections:** a section's repeating group (cards, steps, FAQs, stats) edited on the canvas: text in place, other fields in the panel, add / reorder / delete, optional min and max, saved with the page's draft. Items live in one section on one page; when needed on a second page they become a record type. No nesting.
@@ -911,6 +930,8 @@ Still unchecked in the browser, for when entries return: replacing an image; add
 ## 17. Change Log
 
 Newest first. Each entry: date, what changed, how, and any follow-ups.
+
+- **2026-11-25 · Phase 6: field types · Claude** — `src/lib/fields.ts`: the twelve field types (text, long text, rich text, image, file, link, choice, date, number, yes/no, reference, group) with defaults, emptiness, zod validation from the declaration (`fieldSchema`, `validateValues`) and declaration checks (`checkFieldDefs`, run by `defineSite()`). Rich text is TipTap 3 limited to paragraphs, H2/H3, bold, italic, links and lists, stored as JSON and rendered by `<RichText>` without HTML; links only to web, mail, phone or site-relative addresses. Studio: `FieldsEditor` / `FieldInput` (one control per type; an image's alt text under it; groups as reorderable mini-forms with min/max), the link picker shared with menus (`LinkTargetEditor`), the editor panel and settings screen moved onto them. Studio-editable option lists were built and then dropped as not useful enough: choice options are set in code. Section components moved out of `site.config.ts` into `src/site/sections/index.ts` (gateway `lib/site-sections.ts`) to break an import cycle; the config is now plain data. Fixture: Callout's button is a link field; a new Features section (rich text, repeating group). Studio top bar no longer wraps at laptop widths (icon-only device toggle below 1280px). 103 tests (6 new). Checked in the browser: adding Features, rich text bold, group items, settings screen. Follow-ups: reference picker with records; server-side validation where single things are saved; editing group items on the canvas (next: repeating items).
 
 - **2026-11-25 · Phase 5: core scope · Claude** — Docs only. Reframed from "which sections and records ship with every site" to "which platform features ship": the platform ships features, not content, and each site declares its own sections, records, content types, forms and settings. Signed off one by one: field types (incl. fixed vs Studio-editable option lists; structure stays in code), content types, records (only name, fields, title field, ordering), repeating items in sections, forms (fields in code; a form builder to discuss later), redirects (admins and editors, ask-first on address changes, not-found log, wildcards), Global settings (renamed, tabs, logo/favicon and announcement banner, draft + Publish throughout). Later list (Phases 8–9) and not-in-platform list agreed; multilingual out of v1. Open decisions 2, 3, 6 and 7 closed. Phase 6 rewritten to build the seven features; Phases 8 and 9 extended. Two stale Made entries corrected (rendering uses version keys, not purges; access middleware names).
 
