@@ -1,26 +1,7 @@
 /** Empty fields preserve CMS ownership while allowing missing page rows to render safely. */
 const EMPTY_ROWS = {
-  home: {
-    hero: { headline: "", cta_label: "" },
-    intro: { text: "" },
-    what: { eyebrow: "", intro: "" },
-    bio: { name: "", description: "", portrait_url: "", portrait_alt: "" },
-  },
-  insights: { intro: { title: "", note: "" }, list_label: "" },
-  investments: { intro: { eyebrow: "", title_line_1: "", title_line_2: "", summary: "" } },
-  publications: {
-    intro: { eyebrow: "", title: "", summary: "" },
-    selected_label: "",
-    footnote: "",
-  },
-  settings: {
-    substack_url: "",
-    contact_email: "",
-    enquiry_recipient: "",
-    footer_heading: "",
-    footer_tagline: "",
-    investments_disclaimer: "",
-  },
+  home: { intro: { title: "", summary: "" } },
+  settings: { contact_email: "", footer_heading: "", footer_tagline: "" },
 };
 
 function object(value: unknown): Record<string, unknown> {

@@ -60,7 +60,7 @@ function MediaLibrary() {
               {/\.(mp4|webm|mov)$/i.test(it.path) ? (
                 <video src={it.url} className="h-full w-full object-cover" muted />
               ) : isDocument(it.path) ? (
-                // Not an image (e.g. an interactive's HTML file): a file tile, not a broken <img>.
+                // Not an image (e.g. a PDF or HTML file): a file tile, not a broken <img>.
                 <div className="flex h-full w-full flex-col items-center justify-center gap-1 p-3 text-center">
                   <span className="text-sm font-medium uppercase tracking-[0.16em]">
                     {/\.html?$/i.test(it.path) ? "HTML" : it.path.split(".").pop()}

@@ -399,7 +399,7 @@ The platform ships one template, **Standard**:
 
 | | **Standard** |
 |---|---|
-| Hero | Page hero (title + summary) |
+| Hero | Page hero (title + intro) |
 | Starting sections | None |
 | Required (can't delete; can move) | None |
 | + menu offers | Every section type whose declaration allows Standard |
@@ -417,11 +417,13 @@ Every site gets these; site config adds its own designed sections (section 9).
 
 | Section | Own fields | Items from | Repeats? |
 |---|---|---|---|
-| **Statement** | Text | — | Yes |
-| **Small print** | Text | — | Yes |
-| **Content feed** | Label; options: count, featured = newest | A content type | Once per page |
-| **Record grid / list** | Label, intro; options: filters on/off, layout variant | A record type (optionally only "pinned" records) | Once per page |
+| **Text** ✅ | Heading, body (paragraphs separated by blank lines) | — | Yes |
+| **Image** ✅ | Image, alt text, caption; option: contained / full width | — | Yes |
+| **Content feed** ☐ | Label; options: count, featured = newest | A content type | Once per page |
+| **Record grid / list** ☐ | Label, intro; options: filters on/off, layout variant | A record type (optionally only "pinned" records) | Once per page |
 | **Form** ☐ | Heading, intro, fields (from site config), success message, recipient (Settings) | — | Once per page |
+
+The skeleton site (2026-11-25) ships the page hero plus Text and Image only; the rest arrive as their features are built.
 
 **Not in the platform:** bespoke features such as the original build's Interactive section (uploaded HTML in an iframe) are site sections. If a site ever needs embedded HTML, serve the files from a separate media subdomain, never the site's own origin, so a file can't act with a signed-in editor's session.
 
@@ -623,7 +625,7 @@ Each phase leaves a site that works end to end, so every step can be checked aga
 - ✅ `src/data/` with the access middlewares, and the test that fails if a server function bypasses them.
 - ✅ Every area moved onto `src/data/` and clicked through on local D1/R2: public pages and sitemap; sign-in, approval and users; insights (create, draft, publish, settings, duplicate address refused); page editing and publish; list items; records (create, delete, reorder); media upload and library; comments (thread, reply, resolve, open from Feedback); new page creation and publish.
 - ✅ Sign-in placeholder until Phase 3: pick a seeded account in dev only; a built Worker has no signed-in user, so the Studio is closed.
-- ◐ Fix the `any` types and hook-dependency warnings as their files move: their data calls have moved; 15 `any` types and 7 hook warnings remain in Studio form and editor UI code (DraftForm, TableEditor, PageCanvas, useSiteDraft, the insight editor and Settings screens).
+- ◐ Fix the `any` types and hook-dependency warnings as their files move: after the skeleton cut, 5 `any` types and 9 warnings remain (Studio form and editor code, plus Fast Refresh warnings in UI components).
 - ✅ Browser-side image resize; stable R2 media paths (`/media/<key>`).
 - ◐ Sitemap as a server route on the data layer. ☐ Worker rendering with the edge cache, and cache clearing on Publish and Settings saves; robots as a server route; a smoke test of the built Worker under `wrangler dev`.
 - ✅ Deleted `src/integrations/supabase/` and the Supabase package.
@@ -639,7 +641,7 @@ Each phase leaves a site that works end to end, so every step can be checked aga
 - ☐ Split shared code into `platform/` and the original site-specific code into `site/`; introduce `site.config.ts`, `defineSite()` and the extension points (section 12). The original build's own sections, records and Interactive template are the first test of the boundary.
 - ☐ Confirm TanStack virtual file routes mount `platform/routes` and `site/routes`.
 - ☐ Lint rule: `platform/` never imports from `site/`.
-- ☐ Replace the original site's features with the fixture test site (a custom section, a record type, a template, a bespoke route); CI builds it.
+- ◐ Replace the original site's features with the fixture test site (a custom section, a record type, a template, a bespoke route); CI builds it. *2026-11-25: the original features are gone; the public site is a plain skeleton (hero + Text + Image sections, homepage only). The fixture's custom section, record type, template and bespoke route come with the platform/site split.*
 
 ### Phase 5 — Portfolio (site #1) ☐
 - ☐ `site.config.ts` and designed sections for mcotesjames.com (section 15).
@@ -712,7 +714,7 @@ Unchecked in the browser in the original build, checked in the port (2026-11-25,
 | Current part | Kind | Proposed |
 |---|---|---|
 | Hero (name, role title, location, "Available for work", background portrait) | Page hero (pinned) | Fields: name, role title, location, availability label (empty = hidden), portrait |
-| About (intro paragraph) | Section | Platform **Statement** |
+| About (intro paragraph) | Section | Platform **Text** |
 | Selected Work (6 case studies, paginated carousel) | Record type + section | Record type **Project**: name, short description, services (multi-select), stack (multi-select), images, link, pinned flag, ordering manual. Site section **Selected work** (carousel), fed by Projects. |
 | Current Stack (logos grouped by type) | Section with list items | Site section **Stack**: list items with name, logo, group (Languages / Frameworks / CMS / Tools). Promote to a record type only if it appears on a second page. |
 | Contact (multi-step form, email, LinkedIn) | Section + Settings | Platform **Form** section (multi-step option); email and LinkedIn in Settings |
@@ -792,11 +794,13 @@ Unchecked in the browser in the original build, checked in the port (2026-11-25,
 
 Newest first. Each entry: date, what changed, how, and any follow-ups.
 
+- **2026-11-25 · Skeleton site · Claude** — The original build's public features are removed: insights (routes, article editor and settings, block editor, Google Docs paste and legacy conversion), investments and publications (records screens), pillars / stacking cards / biography hotspots (list items and their drafts), the Interactive section and template, the WebGL background, page transitions, smooth scrolling and letter reveals. The public site is now a plain, neutral skeleton: one built-in page (Homepage) built like every page from a pinned hero (`intro.title` / `intro.summary`) and two section types, Text (heading, body) and Image (image, alt, caption, contained / full width), rendered by one `PageView` for the homepage and created pages. Header (site name, main menu, mobile Menu toggle) and footer (heading, text, menu columns, copyright) are plain; menus lose the "insight" link kind and default to Home + a Contact column. The Studio keeps drafts and publishing, comments, menus, SEO, media, users and page creation; `/admin` opens on Pages; the page switcher lists pages only; comments live on pages only. SEO: the homepage's automatic title is the site name, every page's automatic description its hero intro. The data layer drops the entries, records and list functions (their tables stay in the schema). Stylesheet rewritten: tokens + `.site-*` skeleton rules + the unchanged Studio rules (970 → 300 lines). Removed packages: three, @react-three/fiber, gsap, lenis, video.js, @vimeo/player, react-markdown, rehype-raw. Replaced the leftover favicon, which was the original client's wordmark. Follow-ups: a sample image in the seed; the fixture's custom section, record type, template and bespoke route (Phase 4); the platform features that replace what was removed (content types, records, list items in sections).
+
 - **2026-11-25 · Spec tidy · Claude** — Docs only. Phase 0 marked done (its remaining lint items are tracked once, under Phase 1). The "unchecked in the browser" note updated with what the Phase 1 click-through covered. Open decision 6 now points at Phase 1 / Phase 7 instead of the merged Phase 2. Removed the references to `cms-platform-plan.md`, which isn't in the repo.
 
 - **2026-11-25 · Phase 1: data layer on D1 + R2 (merged with former Phase 2) · Claude** — The site and Studio now run on Cloudflare D1 and R2 through `src/data/`; Supabase is gone. Added `wrangler.jsonc` (D1 `DB`, R2 `MEDIA`), the Drizzle schema (`src/data/schema.ts`: site_content, entries, records, list_items, media, users, comments) with its first migration (`migrations/platform/0000_init.sql`), a fixture seed and `db:*` scripts. Access is denied by default: every server function starts with `asVisitor` / `asEditor` / `asAdmin` / `asOwner` (a test enforces it). Public reads (`content.ts`) return only live columns; Studio modules cover entries, site rows and list publishing (one D1 batch), records, media, comments and users. Components keep their shapes (`shapes.ts` maps generic rows). Sign-in is a dev-only placeholder (pick a seeded account); a built Worker has no signed-in user. Media: browser resize (2400px / 0.82), R2 under `library/…`, served at `/media/<key>` with immutable caching; share images made absolute. Approving a user now sets role `admin` (as every approved account was before). Records are sorted A–Z by name in the Studio (previously Z–A). Checks: type check, 110 tests and the build pass; every area clicked through locally (see roadmap). Follow-ups: the remaining `any` types and hook warnings; Worker rendering with the edge cache; a smoke test of the built Worker; replacing the builder's Vite preset.
 
-- **2026-11-25 · Phase 0: fork and tidy · Claude** — This repo is now the platform repo, cut off from the original client build: its GitHub remote, `.env`, `supabase/`, `.lovable/`, build output, Drizzle/Postgres migrations and Lovable migration config are gone, so nothing here can reach that build's database, Lovable project or Worker. The original client's name, logo, symbol, copy, people and addresses are removed: placeholder wordmarks (`src/assets/brand/wordmark-{dark,light}.svg`) and `BrandSymbol`; `SITE_NAME` / `SITE_URL` / `SITE_HOST` in `lib/seo.ts` (mcotesjames.com, until site config exists); CSS prefixes `osel-admin` → `studio` (per section 4 → Studio theme), `osel-studio-*` → `studio-*`, other `osel-*` → `site-*`. The original features (investments, publications, pillars, biography, Interactive) stay as neutral fixtures until Phase 4. Lint formatting fixed, unused UI components and packages removed, `package-lock.json` replaces `bun.lock`. Checks: type check, 110 tests and build pass; not clicked through in a browser (no database until Phase 2). Follow-ups: the `any` types and hook warnings (Phase 1); `@lovable.dev/vite-tanstack-config` is still the Vite preset — replace with a plain TanStack Start + Nitro config when the Worker config is written (Phase 2).
+- **2026-11-25 · Phase 0: fork and tidy · Claude** — This repo is now the platform repo, cut off from the original client build: its GitHub remote, `.env`, `supabase/`, `.lovable/`, build output, Drizzle/Postgres migrations and Lovable migration config are gone, so nothing here can reach that build's database, Lovable project or Worker. The original client's name, logo, symbol, copy, people and addresses are removed: placeholder wordmarks (`src/assets/brand/wordmark-{dark,light}.svg`) and `BrandSymbol`; `SITE_NAME` / `SITE_URL` / `SITE_HOST` in `lib/seo.ts` (mcotesjames.com, until site config exists); the original CSS class prefix replaced by `studio` / `studio-*` (Studio, per section 4 → Studio theme) and `site-*` (public site). The original features (investments, publications, pillars, biography, Interactive) stay as neutral fixtures until Phase 4. Lint formatting fixed, unused UI components and packages removed, `package-lock.json` replaces `bun.lock`. Checks: type check, 110 tests and build pass; not clicked through in a browser (no database until Phase 2). Follow-ups: the `any` types and hook warnings (Phase 1); `@lovable.dev/vite-tanstack-config` is still the Vite preset — replace with a plain TanStack Start + Nitro config when the Worker config is written (Phase 2).
 
 - **2026-11-25 · Platform spec v1.1 · Claude** — Rendering changed from pre-rendering with rebuilds to Worker rendering with an edge cache cleared on Publish (no deploy hook). Data layer access is now denied by default via `studioFn` / `publicFn` wrappers with a bypass test; validation generated from site config; Drizzle for schema and migrations; Better Auth for sign-in; local dev and staging added. Images are resized in the browser before upload. Interactive section and template removed from the platform (a site feature). Added the platform/site boundary, extension points and platform update flow (section 12); repo model decided (open decision 5). Roadmap reordered so each phase leaves a working site: tidy, data layer on Supabase, swap to D1/R2, auth, then the platform/site split. Follow-ups: confirm TanStack virtual file routes with Start; open decisions 1–4 and 6.
 

@@ -2,39 +2,47 @@ import { describe, expect, it } from "vitest";
 import {
   allPages,
   customPages,
-  duplicateDoc,
+  findPage,
   isPageKey,
   newPageKey,
   slugProblem,
   slugify,
   uniqueSlug,
 } from "@/lib/pages";
-import { resolveSections, readField } from "@/lib/page-sections";
-import { FIXED_PAGE_SEO, insightSeo, pageSeo, resolveSeo, seoHead } from "@/lib/seo";
-import { resolveLink } from "@/lib/menus";
+import {
+  SITE_NAME,
+  SITE_URL,
+  absoluteUrl,
+  organisationLd,
+  pageSeo,
+  readSeoFields,
+  resolveSeo,
+  seoHead,
+  titleSuffix,
+} from "@/lib/seo";
 
 const created = { key: "page_about", title: "About", slug: "about", published: true } as const;
 const draft = { key: "page_team", title: "Team", slug: "team", published: false } as const;
 const site = { pages: { list: [created, draft, { junk: true }] } };
 
 describe("pages", () => {
-  it("lists built-in pages first, then created ones (ignoring malformed entries)", () => {
-    expect(allPages(site).map((p) => [p.key, p.path, p.published])).toEqual([
-      ["home", "/", true],
-      ["insights", "/insights", true],
-      ["investments", "/investments", true],
-      ["publications", "/publications", true],
-      ["page_about", "/about", true],
-      ["page_team", "/team", false],
+  it("lists the built-in homepage first, then created ones (ignoring malformed entries)", () => {
+    expect(allPages(site).map((p) => [p.key, p.path, p.published, p.custom])).toEqual([
+      ["home", "/", true, false],
+      ["page_about", "/about", true, true],
+      ["page_team", "/team", false, true],
     ]);
+    expect(allPages(site).every((p) => p.template === "standard")).toBe(true);
     expect(customPages({}).length).toBe(0);
+    expect(findPage(site, "page_team")?.title).toBe("Team");
+    expect(findPage(site, "page_gone")).toBeUndefined();
   });
 
   it("suggests and checks web addresses", () => {
     expect(slugify("Über uns & Team!")).toBe("uber-uns-and-team");
     expect(slugProblem("about", customPages(site))).toMatch(/Another page/);
     expect(slugProblem("about", customPages(site), "page_about")).toBeNull();
-    expect(slugProblem("insights", [])).toMatch(/already used by the site/);
+    expect(slugProblem("admin", [])).toMatch(/already used by the site/);
     expect(slugProblem("Bad Slug", [])).toMatch(/lowercase/);
     expect(slugProblem("", [])).toMatch(/Add a web address/);
   });
@@ -44,124 +52,13 @@ describe("pages", () => {
     expect(isPageKey(k)).toBe(true);
     expect(isPageKey("home")).toBe(true);
     expect(isPageKey("page_Bad-1")).toBe(false);
+    expect(isPageKey("insights")).toBe(false);
   });
 
-  it("menu links to a created page work only once it's published", () => {
-    const ctx = { posts: [], site };
-    expect(resolveLink({ kind: "page", page: "page_about" }, ctx)).toMatchObject({
-      href: "/about",
-      broken: null,
-    });
-    expect(resolveLink({ kind: "page", page: "page_team" }, ctx).broken).toMatch(/isn't published/);
-    expect(resolveLink({ kind: "page", page: "page_gone" }, ctx).broken).toMatch(
-      /no longer exists/,
-    );
-  });
-});
-
-describe("seo", () => {
-  it("built-in pages keep their original tags until overridden", () => {
-    const s = pageSeo({}, "investments", { title: "Investments page", path: "/investments" });
-    expect(s.title).toBe("Investments — MCJames");
-    expect(s.description).toBe(FIXED_PAGE_SEO["investments"]!.description);
-    expect(s.url).toBe("https://mcotesjames.com/investments");
-    expect(s.custom).toEqual({ title: false, description: false, image: false });
-  });
-
-  it("the homepage title is used as is; other pages get the site ending", () => {
-    expect(pageSeo({}, "home", { title: "Homepage", path: "/" }).title).toBe(
-      FIXED_PAGE_SEO["home"]!.title,
-    );
-    expect(
-      pageSeo({ home: { seo: { title: "MCJames" } } }, "home", { title: "Homepage", path: "/" })
-        .title,
-    ).toBe("MCJames");
-    const custom = pageSeo({ settings: { seo: { title_suffix: "| Studio" } } }, "insights", {
-      title: "x",
-      path: "/insights",
-    });
-    expect(custom.title).toBe("Insights | Studio");
-  });
-
-  it("created pages fall back to their hero, then their name", () => {
-    const withHero = pageSeo(
-      { page_about: { intro: { title: "About Us", summary: "Who we are." } } },
-      "page_about",
-      { title: "About", path: "/about" },
-    );
-    expect([withHero.title, withHero.description]).toEqual(["About Us — MCJames", "Who we are."]);
-    expect(pageSeo({}, "page_about", { title: "About", path: "/about" }).pageTitle).toBe("About");
-  });
-
-  it("custom values win, blanks stay automatic, and the default share image applies", () => {
-    const s = resolveSeo({
-      fields: { title: "Custom", description: "  ", image: "" },
-      auto: { title: "Auto", description: "Auto description" },
-      settings: { default_image: "https://cdn/x.png" },
-      path: "/p",
-    });
-    expect([s.pageTitle, s.description, s.image]).toEqual([
-      "Custom",
-      "Auto description",
-      "https://cdn/x.png",
-    ]);
-    expect(s.custom.title).toBe(true);
-  });
-
-  it("insights use title, standfirst and cover unless overridden", () => {
-    const s = insightSeo(
-      {
-        title: "Chips",
-        excerpt: "On fabs.",
-        cover_url: "https://cdn/c.jpg",
-        slug: "chips",
-        seo: { noindex: true },
-      },
-      {},
-    );
-    expect([s.title, s.description, s.image, s.url, s.type, s.noindex]).toEqual([
-      "Chips — MCJames",
-      "On fabs.",
-      "https://cdn/c.jpg",
-      "https://mcotesjames.com/insights/chips",
-      "article",
-      true,
-    ]);
-  });
-
-  it("builds every tag: canonical, social, robots, image and structured data", () => {
-    const s = insightSeo(
-      {
-        title: "Chips",
-        excerpt: "On fabs.",
-        cover_url: "https://cdn/c.jpg",
-        slug: "chips",
-        seo: { noindex: true },
-      },
-      {},
-    );
-    const head = seoHead(s, { jsonLd: { "@type": "Article" } });
-    const meta = (k: string) =>
-      head.meta.find((m) => m["name"] === k || m["property"] === k)?.["content"];
-    expect(head.links).toEqual([
-      { rel: "canonical", href: "https://mcotesjames.com/insights/chips" },
-    ]);
-    expect([meta("og:url"), meta("og:image"), meta("twitter:card"), meta("robots")]).toEqual([
-      "https://mcotesjames.com/insights/chips",
-      "https://cdn/c.jpg",
-      "summary_large_image",
-      "noindex",
-    ]);
-    expect(head.scripts[0]!.type).toBe("application/ld+json");
-  });
-});
-
-describe("managing pages like insights", () => {
   it("built-in pages can be renamed (admin name only)", () => {
-    const named = allPages({
-      pages: { list: [], names: { home: "Front page", nope: "x", insights: "  " } },
-    });
-    expect(named.map((p) => p.title).slice(0, 2)).toEqual(["Front page", "Insights page"]);
+    const named = allPages({ pages: { list: [], names: { home: "Front page", nope: "x" } } });
+    expect(named.map((p) => p.title)).toEqual(["Front page"]);
+    expect(allPages({ pages: { names: { home: "  " } } })[0]!.title).toBe("Homepage");
   });
 
   it("finds a free web address for a copy", () => {
@@ -171,43 +68,157 @@ describe("managing pages like insights", () => {
         { key: "page_a", title: "A", slug: "about-copy", published: false },
       ]),
     ).toBe("about-copy-2");
-    expect(uniqueSlug("Insights", [])).toBe("insights-2");
+    expect(uniqueSlug("Admin", [])).toBe("admin-2");
+    expect(uniqueSlug("!!!", [])).toBe("page");
   });
+});
 
-  it("duplicating a built-in page copies its hero and every section's text into a created page", () => {
-    const site = {
-      home: {
-        hero: { headline: "Investing in a world", cta_label: "Discover" },
-        intro: { text: "Statement text" },
-        what: { eyebrow: "What we do", intro: "Cards intro" },
-        sections: ["intro", "what"],
-      },
-      settings: { investments_disclaimer: "Disclaimer" },
-    };
-    let n = 0;
-    const doc = duplicateDoc(site, "home", () => `s${++n}`);
-    expect(doc["intro"]).toEqual({ title: "Investing in a world", summary: "" });
-    expect(doc["sections"]).toEqual(["s1", "s2"]);
-    expect(doc["section_data"]).toEqual({
-      s1: { type: "statement", text: "Statement text" },
-      s2: { type: "cards", eyebrow: "What we do", intro: "Cards intro" },
+describe("seo", () => {
+  it("the homepage is titled with the site name, as is, and described by its hero", () => {
+    const s = pageSeo({ home: { intro: { title: "Welcome", summary: " Who we are. " } } }, "home", {
+      title: "Homepage",
+      path: "/",
     });
-    // The copy reads as a normal created page with the same text.
-    const copy = { ...site, page_copy: doc };
-    const secs = resolveSections("page_copy", doc);
-    expect(secs.map((s) => readField(copy, s.fields["text"] ?? s.fields["eyebrow"]!))).toEqual([
-      "Statement text",
-      "What we do",
+    expect([s.title, s.pageTitle, s.description, s.url]).toEqual([
+      SITE_NAME,
+      SITE_NAME,
+      "Who we are.",
+      `${SITE_URL}/`,
     ]);
+    expect(s.custom).toEqual({ title: false, description: false, image: false });
+    const renamed = pageSeo({ settings: { seo: { site_name: "Example Co" } } }, "home", {
+      title: "Homepage",
+      path: "/",
+    });
+    expect(renamed.title).toBe("Example Co");
   });
 
-  it("duplicating keeps site-wide fields shared rather than copied", () => {
-    const site = {
-      investments: { intro: { title_line_1: "Building", title_line_2: "layers.", summary: "Sum" } },
-      settings: { investments_disclaimer: "D" },
-    };
-    const doc = duplicateDoc(site, "investments", () => "g1");
-    expect(doc["intro"]).toEqual({ title: "Building layers.", summary: "Sum" });
-    expect(doc["section_data"]).toEqual({ g1: { type: "investments_grid" } });
+  it("other pages use their hero title, then their name, with the site ending", () => {
+    const withHero = pageSeo(
+      { page_about: { intro: { title: "About Us", summary: "Who we are." } } },
+      "page_about",
+      { title: "About", path: "/about" },
+    );
+    expect([withHero.title, withHero.description, withHero.url]).toEqual([
+      `About Us — ${SITE_NAME}`,
+      "Who we are.",
+      `${SITE_URL}/about`,
+    ]);
+    const bare = pageSeo({}, "page_about", { title: "About", path: "/about" });
+    expect([bare.pageTitle, bare.description]).toEqual(["About", ""]);
+  });
+
+  it("the title ending follows Settings → SEO", () => {
+    expect(titleSuffix({})).toBe(` — ${SITE_NAME}`);
+    expect(titleSuffix({ site_name: "Example Co" })).toBe(" — Example Co");
+    expect(titleSuffix({ title_suffix: "  | Studio" })).toBe(" | Studio");
+    const s = pageSeo({ settings: { seo: { title_suffix: "| Studio" } } }, "page_about", {
+      title: "About",
+      path: "/about",
+    });
+    expect(s.title).toBe("About | Studio");
+  });
+
+  it("page overrides win, including noindex and the share image", () => {
+    const s = pageSeo(
+      {
+        page_about: {
+          intro: { title: "About Us", summary: "Auto" },
+          seo: { title: "Custom", description: "Typed", image: "/media/a.png", noindex: true },
+        },
+      },
+      "page_about",
+      { title: "About", path: "/about" },
+    );
+    expect([s.title, s.description, s.image, s.noindex]).toEqual([
+      `Custom — ${SITE_NAME}`,
+      "Typed",
+      `${SITE_URL}/media/a.png`,
+      true,
+    ]);
+    expect(s.custom).toEqual({ title: true, description: true, image: true });
+    expect(s.auto.title).toBe("About Us");
+    const home = pageSeo({ home: { seo: { title: "Example" } } }, "home", {
+      title: "Homepage",
+      path: "/",
+    });
+    expect(home.title).toBe("Example");
+  });
+
+  it("custom values win, blanks stay automatic, and the default share image applies", () => {
+    const s = resolveSeo({
+      fields: { title: "Custom", description: "  ", image: "" },
+      auto: { title: "Auto", description: "Auto description" },
+      settings: { default_image: "https://example.com/x.png" },
+      path: "/p",
+    });
+    expect([s.pageTitle, s.description, s.image, s.noindex]).toEqual([
+      "Custom",
+      "Auto description",
+      "https://example.com/x.png",
+      false,
+    ]);
+    expect(s.custom.title).toBe(true);
+    expect(s.custom.image).toBe(false);
+    expect(readSeoFields({ noindex: "yes", title: 3 })).toEqual({
+      title: "",
+      description: "",
+      image: "",
+      noindex: false,
+    });
+  });
+
+  it("makes uploaded media addresses absolute and leaves full ones alone", () => {
+    expect(absoluteUrl("/media/x.png")).toBe(`${SITE_URL}/media/x.png`);
+    expect(absoluteUrl("https://example.com/x.png")).toBe("https://example.com/x.png");
+    expect(absoluteUrl("")).toBe("");
+  });
+
+  it("builds every tag: canonical, social, robots, image and structured data", () => {
+    const s = pageSeo(
+      {
+        page_about: {
+          intro: { title: "About", summary: "Who we are." },
+          seo: { image: "/media/c.jpg", noindex: true },
+        },
+      },
+      "page_about",
+      { title: "About", path: "/about" },
+    );
+    const head = seoHead(s, { jsonLd: organisationLd({}) });
+    const meta = (k: string) =>
+      head.meta.find((m) => m["name"] === k || m["property"] === k)?.["content"];
+    expect(head.links).toEqual([{ rel: "canonical", href: `${SITE_URL}/about` }]);
+    expect(head.meta[0]).toEqual({ title: `About — ${SITE_NAME}` });
+    expect([
+      meta("description"),
+      meta("og:url"),
+      meta("og:type"),
+      meta("og:image"),
+      meta("twitter:card"),
+      meta("robots"),
+    ]).toEqual([
+      "Who we are.",
+      `${SITE_URL}/about`,
+      "website",
+      `${SITE_URL}/media/c.jpg`,
+      "summary_large_image",
+      "noindex",
+    ]);
+    expect(head.scripts[0]!.type).toBe("application/ld+json");
+    expect(JSON.parse(head.scripts[0]!.children)).toMatchObject({
+      "@type": "Organization",
+      name: SITE_NAME,
+      url: SITE_URL,
+    });
+  });
+
+  it("leaves out robots, image tags and structured data when there are none", () => {
+    const head = seoHead(pageSeo({}, "home", { title: "Homepage", path: "/" }));
+    const names = head.meta.map((m) => m["name"] ?? m["property"]);
+    expect(names).not.toContain("robots");
+    expect(names).not.toContain("og:image");
+    expect(head.meta.find((m) => m["name"] === "twitter:card")?.["content"]).toBe("summary");
+    expect(head.scripts).toEqual([]);
   });
 });

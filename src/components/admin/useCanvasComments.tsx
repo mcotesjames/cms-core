@@ -155,9 +155,8 @@ export function useCanvasComments({
           />
           {pinInfo.hidden.includes(open.id) && (
             <p className="rounded-sm border border-border p-2 text-xs text-muted-foreground">
-              This comment is on something that's closed right now (an accordion, a card's back or a
-              hotspot). Its pin is shown hollow nearby — Alt-click (Option-click on a Mac) to open
-              it.
+              This comment is on something that's closed right now (such as the mobile menu). Its
+              pin is shown hollow nearby — Alt-click (Option-click on a Mac) to open it.
             </p>
           )}
         </>

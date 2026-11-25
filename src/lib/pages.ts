@@ -1,5 +1,5 @@
 /**
- * Every page on the site: the four built-in pages, plus pages created in the Content Studio
+ * Every page on the site: the built-in homepage, plus pages created in the Content Studio
  * ("+ New page"). Created pages are listed in the site_content row "pages"
  * ({ list: [{ key, title, slug, published }] }), and each has its own site_content row (keyed
  * `page_<letters>`) holding its hero, sections and SEO, with draft and publish like any page.
@@ -14,7 +14,7 @@
  */
 import { readField, resolveSections, SECTION_TYPES, type Doc } from "./page-sections";
 import { startingSections, templateOf, type TemplateKey } from "./templates";
-export type FixedPageKey = "home" | "insights" | "investments" | "publications";
+export type FixedPageKey = "home";
 export type CustomPageKey = `page_${string}`;
 export type PageKey = FixedPageKey | CustomPageKey;
 
@@ -31,9 +31,6 @@ export type PageInfo = {
 
 export const FIXED_PAGES: Array<{ key: FixedPageKey; title: string; path: string }> = [
   { key: "home", title: "Homepage", path: "/" },
-  { key: "insights", title: "Insights page", path: "/insights" },
-  { key: "investments", title: "Investments page", path: "/investments" },
-  { key: "publications", title: "Publications page", path: "/publications" },
 ];
 const FIXED_KEYS = new Set<string>(FIXED_PAGES.map((p) => p.key));
 
@@ -43,10 +40,8 @@ export const isPageKey = (k: string): k is PageKey => isFixedPage(k) || isCustom
 
 /** Web addresses that already belong to the site or the Studio. */
 export const RESERVED_SLUGS = [
-  "insights",
-  "investments",
-  "publications",
   "admin",
+  "media",
   "studio",
   "sitemap.xml",
   "robots.txt",
@@ -155,55 +150,31 @@ export function uniqueSlug(base: string, pages: CustomPage[]): string {
   }
 }
 
-/** Each built-in page's hero, as a created page's title and summary. */
-function heroOf(key: PageKey, doc: Doc): { title: string; summary: string } {
+/** A page's hero (title + intro), the same fields on every page. */
+function heroOf(doc: Doc): { title: string; summary: string } {
   const s = (v: unknown) => (typeof v === "string" ? v : "");
-  if (key === "home") return { title: s(doc["hero"]?.["headline"]), summary: "" };
-  if (key === "insights")
-    return { title: s(doc["intro"]?.["title"]), summary: s(doc["intro"]?.["note"]) };
-  if (key === "investments") {
-    const i = doc["intro"] ?? {};
-    return {
-      title: [s(i["title_line_1"]), s(i["title_line_2"])].filter(Boolean).join(" "),
-      summary: s(i["summary"]),
-    };
-  }
   return { title: s(doc["intro"]?.["title"]), summary: s(doc["intro"]?.["summary"]) };
 }
 
 /**
- * The content for a copy of any page (built-in or created), as a created page: its hero becomes the
- * copy's title and summary, and every section is copied with its own text, including original
- * built-in sections, which become ordinary sections with their current text. Site-wide fields
- * (e.g. the investments disclaimer) stay shared, and list-fed sections keep showing the shared
- * lists. Search settings aren't copied: the copy starts automatic.
+ * The content for a copy of any page (built-in or created), as a created page: its hero and every
+ * section with its current content. Search settings aren't copied: the copy starts automatic.
  */
 export function duplicateDoc(site: Doc, source: PageKey, newId: () => string): Doc {
   const doc = (site[source] ?? {}) as Doc;
-  const hero = heroOf(source, doc);
   const sections: string[] = [];
   const section_data: Record<string, Record<string, string>> = {};
   for (const inst of resolveSections(source, doc)) {
     const id = newId();
     sections.push(id);
-    // Sections added in the Studio are copied whole, including values the panel manages
-    // itself (e.g. an interactive's file name and previous version).
-    const saved = doc["section_data"]?.[inst.id];
-    const own: Record<string, string> =
-      saved && typeof saved === "object" ? { ...saved, type: inst.type } : { type: inst.type };
+    const own: Record<string, string> = { type: inst.type };
     for (const f of SECTION_TYPES[inst.type].fields) {
-      if (f.siteWide) {
-        delete own[f.name];
-        continue;
-      }
       const addr = inst.fields[f.name];
       own[f.name] = addr ? readField(site, addr) : "";
     }
     section_data[id] = own;
   }
-  // A copy of a built-in page is Standard; a created page's copy keeps its template.
-  const template = templateOf(source, doc);
-  return { intro: hero, ...(template !== "standard" && { template }), sections, section_data };
+  return { intro: heroOf(doc), sections, section_data };
 }
 
 /**

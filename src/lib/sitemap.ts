@@ -2,12 +2,6 @@ import { allPages } from "./pages";
 import { SITE_URL, readSeoFields } from "./seo";
 
 export type SitemapPageRow = { key: string; content: unknown };
-export type SitemapPost = {
-  slug: string;
-  published: boolean;
-  published_at: string | null;
-  seo: unknown;
-};
 
 const xml = (value: string) =>
   value.replace(/[<>&'"]/g, (character) => {
@@ -21,29 +15,20 @@ const xml = (value: string) =>
     return entities[character] ?? character;
   });
 
-export function buildSitemap(rows: SitemapPageRow[], posts: SitemapPost[]): string {
+/** Every published page not hidden from search engines. */
+export function buildSitemap(rows: SitemapPageRow[]): string {
   const site = Object.fromEntries(rows.map((row) => [row.key, row.content]));
-  const urls = new Map<string, string | null>();
+  const urls: string[] = [];
   for (const page of allPages(site)) {
     const doc = site[page.key] as Record<string, unknown> | undefined;
     if (page.published && !readSeoFields(doc?.["seo"]).noindex) {
-      // updated_at also changes on draft saves, so it isn't a live content timestamp.
-      urls.set(`${SITE_URL}${page.path}`, null);
-    }
-  }
-  for (const post of posts) {
-    if (post.published && !readSeoFields(post.seo).noindex) {
-      urls.set(`${SITE_URL}/insights/${post.slug}`, post.published_at);
+      // No <lastmod>: updated_at also changes on draft saves, so it isn't a live timestamp.
+      urls.push(`${SITE_URL}${page.path}`);
     }
   }
   return (
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
-    [...urls]
-      .map(
-        ([loc, lastmod]) =>
-          `  <url><loc>${xml(loc)}</loc>${lastmod ? `<lastmod>${xml(lastmod.slice(0, 10))}</lastmod>` : ""}</url>`,
-      )
-      .join("\n") +
+    urls.map((loc) => `  <url><loc>${xml(loc)}</loc></url>`).join("\n") +
     `\n</urlset>\n`
   );
 }

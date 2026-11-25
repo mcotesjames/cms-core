@@ -5,7 +5,8 @@
  * comments, SEO, menus and canvas.
  *
  * Stored as `template` in a created page's site_content row; a missing value is Standard.
- * Built-in pages (Home, Insights, Investments, Publications) are always Standard.
+ * Built-in pages are always Standard. The platform ships Standard only; sites add their own
+ * templates (spec section 6).
  *
  * Switching template is a draft edit that replaces the page's sections with the new template's
  * starting sections and keeps everything else (hero, SEO, …). Discard undoes it until Publish.
@@ -13,7 +14,7 @@
 import { SECTION_TYPES, type Doc, type SectionType } from "./page-sections";
 import { isFixedPage, type PageKey } from "./pages";
 
-export type TemplateKey = "standard" | "interactive";
+export type TemplateKey = "standard";
 
 export type TemplateDef = {
   label: string;
@@ -33,17 +34,10 @@ export type TemplateDef = {
 export const TEMPLATES: Record<TemplateKey, TemplateDef> = {
   standard: {
     label: "Standard",
-    description: "Text, lists and records in flexible sections.",
+    description: "A hero, then text and image sections.",
     hero: true,
     required: [],
-    allowed: (t) => t !== "interactive",
-  },
-  interactive: {
-    label: "Interactive",
-    description: "A full-width interactive piece from an uploaded HTML file, with no page hero.",
-    hero: false,
-    required: ["interactive"],
-    allowed: (t) => t === "interactive" || t === "footnote",
+    allowed: () => true,
   },
 };
 

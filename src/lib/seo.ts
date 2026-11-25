@@ -3,10 +3,9 @@
  * sharing tags (Open Graph / Twitter), robots, and structured data. Every public route builds
  * its head with `seoHead(resolveSeo(...))`, so a new page gets complete tags automatically.
  *
- * Each page (and insight) can override its search title, description and share image, or hide
- * itself from search engines (`seo` on the page row / insight). Anything left empty is automatic:
- * built-in pages fall back to their original hand-written tags, created pages to their hero, and
- * insights to their title, standfirst and cover. Site-wide settings (site name, title ending,
+ * Each page can override its search title, description and share image, or hide itself from
+ * search engines (`seo` on the page row). Anything left empty is automatic: the hero's title (the
+ * site name on the homepage) and intro. Site-wide settings (site name, title ending,
  * default share image) live in Settings → SEO.
  */
 import type { PageKey } from "./pages";
@@ -22,26 +21,6 @@ export const DESCRIPTION_LIMIT = 155;
 
 export type SeoFields = { title?: string; description?: string; image?: string; noindex?: boolean };
 export type SeoSettings = { site_name?: string; title_suffix?: string; default_image?: string };
-
-/** The tags each built-in page had before SEO was editable: kept as its automatic values. */
-export const FIXED_PAGE_SEO: Record<string, { title: string; description: string }> = {
-  home: {
-    title: `${SITE_NAME} — Visual CMS`,
-    description: "An editorial site built on the MCJames Visual CMS.",
-  },
-  insights: {
-    title: "Insights",
-    description: "Articles, essays and notes.",
-  },
-  investments: {
-    title: "Investments",
-    description: "Selected investments, filterable by sector and stage.",
-  },
-  publications: {
-    title: "Publications",
-    description: "Research and published work, hosted by the institutions that published it.",
-  },
-};
 
 const clean = (v: unknown) => (typeof v === "string" ? v.trim() : "");
 /** Uploaded media is stored as a site path (`/media/…`); share tags need a full address. */
@@ -129,37 +108,19 @@ export function pageSeo(
   info: { title: string; path: string },
 ): ResolvedSeo {
   const doc = (site[key] ?? {}) as Record<string, unknown>;
-  const fixed = FIXED_PAGE_SEO[key];
   const intro = (doc["intro"] ?? {}) as Record<string, unknown>;
+  const settings = readSeoSettings(site["settings"]);
   return resolveSeo({
     fields: readSeoFields(doc["seo"]),
-    auto: fixed ?? {
-      title: clean(intro["title"]) || info.title,
+    // Automatic: the homepage is titled with the site name, other pages with their hero title;
+    // the description is the hero intro.
+    auto: {
+      title: key === "home" ? siteName(settings) : clean(intro["title"]) || info.title,
       description: clean(intro["summary"]),
     },
-    settings: readSeoSettings(site["settings"]),
+    settings,
     path: info.path,
     home: key === "home",
-  });
-}
-
-/** SEO for an insight: its title, standfirst and cover unless overridden. */
-export function insightSeo(
-  post: {
-    title: string;
-    excerpt: string | null;
-    cover_url: string | null;
-    slug: string;
-    seo?: unknown;
-  },
-  settings: unknown,
-): ResolvedSeo {
-  return resolveSeo({
-    fields: readSeoFields(post.seo),
-    auto: { title: post.title, description: clean(post.excerpt), image: clean(post.cover_url) },
-    settings: readSeoSettings(settings),
-    path: `/insights/${post.slug}`,
-    type: "article",
   });
 }
 
@@ -197,23 +158,6 @@ export const organisationLd = (settings: SeoSettings) => ({
   "@type": "Organization",
   name: siteName(settings),
   url: SITE_URL,
-});
-
-/** Structured data for an insight. */
-export const articleLd = (
-  seo: ResolvedSeo,
-  post: { published_at: string | null; author: string | null },
-  settings: SeoSettings,
-) => ({
-  "@context": "https://schema.org",
-  "@type": "Article",
-  headline: seo.pageTitle,
-  description: seo.description,
-  ...(seo.image ? { image: [seo.image] } : {}),
-  ...(post.published_at ? { datePublished: post.published_at } : {}),
-  ...(post.author ? { author: { "@type": "Person", name: post.author } } : {}),
-  publisher: { "@type": "Organization", name: siteName(settings), url: SITE_URL },
-  mainEntityOfPage: seo.url,
 });
 
 /** Google cuts titles and descriptions off around these lengths; the panel warns past them. */

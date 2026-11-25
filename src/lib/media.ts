@@ -43,8 +43,7 @@ async function prepare(file: File): Promise<{ file: File; width?: number; height
 
 /**
  * Uploads to the site's media library and returns its stable address (`/media/…`).
- * `contentType` overrides the browser's guess (e.g. "text/html" for interactive files, which
- * some browsers report as empty).
+ * `contentType` overrides the browser's guess (some browsers report an empty type for some files).
  */
 export async function uploadMedia(file: File, opts?: { contentType?: string }): Promise<string> {
   const ready = await prepare(file);

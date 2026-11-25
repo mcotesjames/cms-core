@@ -3,15 +3,9 @@
  * server functions (src/data/), which check the signed-in user; public reads never include them.
  */
 import { getSiteRows, saveSiteRow as saveSiteRowFn } from "@/data/site";
-import { listPostDrafts } from "@/data/entries";
 import type { JsonObject } from "@/data/shapes";
 
 export type { JsonObject };
-
-/** Drafts of every insight that has one, keyed by id. */
-export function fetchPostDrafts(): Promise<Record<string, JsonObject>> {
-  return listPostDrafts();
-}
 
 type SiteRowFields = { content?: unknown; draft?: unknown };
 

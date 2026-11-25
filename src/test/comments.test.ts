@@ -17,7 +17,7 @@ let n = 0;
 const row = (p: Partial<CommentRow>): CommentRow => ({
   id: `c${++n}`,
   thread_id: null,
-  anchor: "home:intro.text",
+  anchor: "home:intro.title",
   opened_on: "page:home",
   device: "desktop",
   body: "x",
@@ -42,57 +42,56 @@ describe("comments", () => {
     expect(t[1]!.replies.map((x) => x.id)).toEqual([r1.id, r2.id]);
   });
 
-  it("knows which anchors appear on several pages", () => {
-    expect(isSharedAnchor(`record:investments:${ID}`)).toBe(true);
-    expect(isSharedAnchor(`post:${ID}`)).toBe(true);
-    expect(isSharedAnchor("menu:m-insights")).toBe(true);
+  it("knows which anchors appear on every page", () => {
+    expect(isSharedAnchor("menu:m-home")).toBe(true);
+    expect(isSharedAnchor("menucol:c-contact")).toBe(true);
+    expect(isSharedAnchor("menus:footer")).toBe(true);
     expect(isSharedAnchor("settings:footer_tagline")).toBe(true);
-    expect(isSharedAnchor("home:pillars")).toBe(false);
-    expect(isSharedAnchor("post:title")).toBe(false); // an article field, only on its own article
+    expect(isSharedAnchor("home:intro.title")).toBe(false);
+    expect(isSharedAnchor("page:home")).toBe(false);
+    expect(isSharedAnchor(`post:${ID}`)).toBe(false);
   });
 
   it("shows threads left here plus shared ones on this canvas, numbered by age", () => {
-    const here = row({ anchor: "home:intro.text", created_at: "2026-10-01T00:00:00Z" });
-    const gone = row({ anchor: "home:section_data.old.text", created_at: "2026-10-02T00:00:00Z" });
-    const record = row({
-      anchor: `record:investments:${ID}`,
-      opened_on: `record:investments:${ID}`,
+    const here = row({ anchor: "home:intro.title", created_at: "2026-10-01T00:00:00Z" });
+    const gone = row({
+      anchor: "home:section_data.old.heading",
+      created_at: "2026-10-02T00:00:00Z",
+    });
+    const menu = row({
+      anchor: "menu:m-home",
+      opened_on: "page:page_about",
       created_at: "2026-10-03T00:00:00Z",
     });
-    const elsewhere = row({ anchor: "investments:intro.title", opened_on: "page:investments" });
+    const elsewhere = row({ anchor: "page_about:intro.title", opened_on: "page:page_about" });
     const page = row({ anchor: "page:home", created_at: "2026-10-04T00:00:00Z" });
     const done = row({ resolved_at: "2026-10-05T00:00:00Z" });
-    const found = { "home:intro.text": "Text", [`record:investments:${ID}`]: "Investment" };
+    const found = { "home:intro.title": "Title", "menu:m-home": "Home" };
     const list = canvasThreads(
-      groupThreads([here, gone, record, elsewhere, page, done]),
+      groupThreads([here, gone, menu, elsewhere, page, done]),
       "page:home",
       found,
     );
     expect(list.map((t) => [t.id, t.n, t.removed])).toEqual([
       [here.id, 1, false],
       [gone.id, 2, true],
-      [record.id, 3, false],
+      [menu.id, 3, false],
       [page.id, 4, false],
     ]);
-    // The record's thread isn't shown on a canvas where the record doesn't appear.
-    expect(canvasThreads(groupThreads([record]), "page:home", {}).length).toBe(0);
+    // A shared thread isn't shown on a canvas where its element doesn't appear.
+    expect(canvasThreads(groupThreads([menu]), "page:home", {}).length).toBe(0);
   });
 
   it("names and links the place a thread was left", () => {
-    expect(parsePlace("page:investments")).toMatchObject({
+    expect(parsePlace("page:home")).toEqual({ kind: "page", key: "home", label: "Homepage" });
+    expect(parsePlace("page:page_about", { pages: { page_about: "About" } })).toEqual({
       kind: "page",
-      key: "investments",
-      label: "Investments page",
+      key: "page_about",
+      label: "About",
     });
-    expect(parsePlace(`post:${ID}`, { posts: { [ID]: "Chips" } })).toMatchObject({
-      kind: "post",
-      label: "Insight: Chips",
-    });
-    expect(parsePlace(`record:publications:${ID}`, { records: { [ID]: "Paper" } })).toMatchObject({
-      kind: "record",
-      table: "publications",
-      label: "Publication: Paper",
-    });
+    expect(parsePlace("page:page_gone")).toMatchObject({ label: "A page that was deleted" });
+    expect(parsePlace("page:Not-A-Key")).toBeNull();
+    expect(parsePlace(`post:${ID}`)).toBeNull();
     expect(parsePlace("nowhere")).toBeNull();
   });
 
@@ -110,11 +109,14 @@ describe("comments", () => {
   });
 
   it("reads the open-in-place search params", () => {
-    expect(commentSearch({ comment: "c1", record: "r1", other: 1 })).toEqual({
-      comment: "c1",
-      record: "r1",
+    expect(
+      commentSearch({ comment: "c1", device: "mobile", mode: "comment", record: "r1" }),
+    ).toEqual({ comment: "c1", device: "mobile", mode: "comment" });
+    expect(commentSearch({ comment: 5, device: "watch", mode: "edit" })).toEqual({
+      comment: undefined,
+      device: undefined,
+      mode: undefined,
     });
-    expect(commentSearch({ comment: 5 })).toEqual({ comment: undefined, record: undefined });
   });
 
   it("reads stored pin positions and ignores malformed ones", () => {

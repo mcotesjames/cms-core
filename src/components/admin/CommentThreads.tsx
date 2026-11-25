@@ -7,10 +7,8 @@ import { useComments, useProfiles } from "./useComments";
 import {
   daysUntilRemoved,
   profileName,
-  recordAnchor,
   timeAgo,
   type CommentRow,
-  type RecordTable,
   type Thread,
 } from "@/lib/comments";
 
@@ -268,102 +266,5 @@ export function ThreadRow({
         </span>
       </span>
     </button>
-  );
-}
-
-/**
- * Comments on one record (an investment or publication), in its form. The same threads show as
- * pins wherever the record appears on a page canvas.
- */
-export function RecordComments({
-  table,
-  id,
-  focus,
-}: {
-  table: RecordTable;
-  id: string;
-  focus?: string | undefined;
-}) {
-  const c = useComments();
-  const anchor = recordAnchor(table, id);
-  const [openId, setOpenId] = useState<string | null>(focus ?? null);
-  const [adding, setAdding] = useState(false);
-  const [showResolved, setShowResolved] = useState(false);
-  const threads = c.threads.filter((t) => t.anchor === anchor);
-  const open = threads.filter((t) => !t.resolved_at);
-  const resolved = threads.filter((t) => t.resolved_at);
-  const current = openId ? threads.find((t) => t.id === openId) : undefined;
-  const label = table === "investments" ? "this investment" : "this publication";
-  // Opened from the Feedback list: bring the thread into view below the form.
-  const ref = useRef<HTMLElement>(null);
-  useEffect(() => {
-    if (focus) ref.current?.scrollIntoView({ block: "start" });
-  }, [focus]);
-  return (
-    <section
-      ref={ref}
-      className="space-y-3 rounded-sm border border-border p-4"
-      aria-label="Comments"
-    >
-      <h3 className="text-sm">
-        Comments {open.length > 0 && <span className="studio-count">{open.length}</span>}
-      </h3>
-      {current ? (
-        <ThreadView
-          thread={current}
-          label={label}
-          onBack={() => setOpenId(null)}
-          backLabel="All comments on this record"
-        />
-      ) : adding ? (
-        <NewThread
-          label={label}
-          onCancel={() => setAdding(false)}
-          onPost={async (body, assignee_id) => {
-            const newId = await c.start({
-              anchor,
-              opened_on: anchor,
-              device: "desktop",
-              body,
-              assignee_id,
-            });
-            if (newId) {
-              setAdding(false);
-              setOpenId(newId);
-            }
-          }}
-        />
-      ) : (
-        <>
-          {open.length === 0 && (
-            <p className="text-xs text-muted-foreground">
-              No open comments. Use this to ask for content or changes to this record.
-            </p>
-          )}
-          {open.map((t) => (
-            <ThreadRow key={t.id} thread={t} onOpen={() => setOpenId(t.id)} />
-          ))}
-          <Button type="button" size="sm" variant="outline" onClick={() => setAdding(true)}>
-            + Add comment
-          </Button>
-          {resolved.length > 0 && (
-            <div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowResolved(!showResolved)}
-              >
-                {showResolved ? "Hide" : "Show"} resolved ({resolved.length})
-              </Button>
-              {showResolved &&
-                resolved.map((t) => (
-                  <ThreadRow key={t.id} thread={t} onOpen={() => setOpenId(t.id)} />
-                ))}
-            </div>
-          )}
-        </>
-      )}
-    </section>
   );
 }

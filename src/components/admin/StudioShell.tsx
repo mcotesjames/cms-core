@@ -39,7 +39,7 @@ export function StudioShell(p: {
   setDevice?: (d: keyof typeof DEVICES) => void;
   /** Comment mode toggle; `forMe` = open comments for the signed-in user. */
   comments?: { on: boolean; toggle: () => void; forMe: number };
-  /** The page or insight being edited: the title becomes the page switcher. */
+  /** The page being edited: the title becomes the page switcher. */
   switcher?: SwitcherTarget;
 }) {
   const [ownDevice, setOwnDevice] = useState<keyof typeof DEVICES>("desktop");

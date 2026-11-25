@@ -1,8 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { listStudioPosts } from "@/data/entries";
-import { listStudioRecords } from "@/data/records";
 import { Button } from "@/components/ui/button";
 import { ThreadRow } from "@/components/admin/CommentThreads";
 import { useComments } from "@/components/admin/useComments";
@@ -14,30 +12,10 @@ export const Route = createFileRoute("/admin/feedback")({ component: Feedback })
 
 type Tab = "mine" | "open" | "resolved";
 
-/** Names for the places threads were left (insights, investments, publications). */
-function usePlaceNames() {
-  return (
-    useQuery({
-      queryKey: ["admin", "comment-place-names"],
-      queryFn: async () => {
-        const [p, i, u] = await Promise.all([
-          listStudioPosts(),
-          listStudioRecords({ data: { table: "investments" } }),
-          listStudioRecords({ data: { table: "publications" } }),
-        ]);
-        const map = (rows: Array<{ id: string; title?: unknown; name?: unknown }>) =>
-          Object.fromEntries(rows.map((r) => [r.id, String(r.title ?? r.name ?? "")]));
-        return { posts: map(p), records: { ...map(i), ...map(u) } };
-      },
-    }).data ?? { posts: {}, records: {} }
-  );
-}
-
 /** Every feedback thread across the Studio. Opening one takes you to it, in place. */
 function Feedback() {
   const me = useAdminUser();
   const c = useComments();
-  const names = usePlaceNames();
   const pageNames = Object.fromEntries(usePages().all.map((p) => [p.key, p.title]));
   const navigate = useNavigate();
   const mine = c.threads.filter((t) => isOpen(t) && t.assignee_id === me.id);
@@ -52,16 +30,11 @@ function Feedback() {
 
   const go = (t: Thread, place: Place | null) => {
     if (!place) return;
-    const search = { comment: t.id };
-    if (place.kind === "page")
-      void navigate({ to: "/admin/pages/$key", params: { key: place.key }, search });
-    else if (place.kind === "post")
-      void navigate({ to: "/admin/insights/$id", params: { id: place.id }, search });
-    else
-      void navigate({
-        to: place.table === "investments" ? "/admin/investments" : "/admin/publications",
-        search: { ...search, record: place.id },
-      });
+    void navigate({
+      to: "/admin/pages/$key",
+      params: { key: place.key },
+      search: { comment: t.id },
+    });
   };
 
   const tabs: Array<[Tab, string, number]> = [
@@ -73,9 +46,8 @@ function Feedback() {
     <div className="max-w-3xl space-y-6">
       <h1 className="text-xl">Feedback</h1>
       <p className="text-sm text-muted-foreground">
-        Comments left on pages, insights and records. To add one, open a page or insight and press
-        Comment in the top bar, or use Comments in a record's form. Resolved comments are deleted
-        after 30 days.
+        Comments left on pages. To add one, open a page and press Comment in the top bar. Resolved
+        comments are deleted after 30 days.
       </p>
       <div className="flex gap-2" role="tablist">
         {tabs.map(([k, label, n]) => (
@@ -104,7 +76,7 @@ function Feedback() {
       ) : (
         <ul className="divide-y divide-border rounded-sm border border-border">
           {shown.map((t) => {
-            const place = parsePlace(t.opened_on, { ...names, pages: pageNames });
+            const place = parsePlace(t.opened_on, { pages: pageNames });
             return (
               <li key={t.id}>
                 <ThreadRow

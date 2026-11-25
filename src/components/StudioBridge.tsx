@@ -3,15 +3,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import { isStudioFrame, type StudioMessage } from "@/lib/studio-mode";
 import type { PinPosition } from "@/lib/comments";
 import { siteContentQuery } from "@/lib/site-content";
-import { homeQuery } from "@/lib/content";
-import { parseItem, placeInBox } from "@/lib/list-drafts";
 
 /**
  * Runs inside the Content Studio canvas iframe only. Shows draft content from
  * the editor, makes every [data-cms] element editable in place, reports edits
  * and section selection back to the editor, and shows ↑/↓ on reorderable
- * [data-cms-section] elements. Shows draft list items (pillars, cards, hotspots), highlights the
- * selected [data-cms-item], and places a selected hotspot where the biography is clicked.
+ * [data-cms-section] elements, and highlights the selected [data-cms-item] (menu links and columns).
  * In comment mode, clicks start a comment on the innermost addressable element instead of
  * editing, and open threads show as numbered pins (only in comment mode).
  */
@@ -25,7 +22,6 @@ export function StudioBridge() {
       staleTime: Infinity,
       refetchOnWindowFocus: false,
     });
-    qc.setQueryDefaults(homeQuery.queryKey, { staleTime: Infinity, refetchOnWindowFocus: false });
 
     // A quick, fading overlay in the selection colour over what was just selected.
     let lastInnerFlash = 0;
@@ -49,32 +45,17 @@ export function StudioBridge() {
     };
 
     // ---- Comment mode: anything addressable can carry a comment.
-    const ANCHOR =
-      "[data-cms],[data-cms-image],[data-cms-record],[data-cms-item],[data-cms-section]";
-    const ATTRS = [
-      "data-cms",
-      "data-cms-image",
-      "data-cms-record",
-      "data-cms-item",
-      "data-cms-section",
-    ];
+    const ANCHOR = "[data-cms],[data-cms-image],[data-cms-item],[data-cms-section]";
+    const ATTRS = ["data-cms", "data-cms-image", "data-cms-item", "data-cms-section"];
     const anchorOf = (el: HTMLElement) =>
       el.dataset["cms"] ??
       el.dataset["cmsImage"] ??
-      el.dataset["cmsRecord"] ??
       el.dataset["cmsItem"] ??
       el.dataset["cmsSection"] ??
       "";
     const findAnchor = (a: string) =>
       document.querySelector<HTMLElement>(ATTRS.map((k) => `[${k}="${CSS.escape(a)}"]`).join(","));
     const kindOf = (el: HTMLElement) => {
-      const rec = el.dataset["cmsRecord"];
-      if (rec)
-        return rec.startsWith("record:investments")
-          ? "Investment"
-          : rec.startsWith("record:publications")
-            ? "Publication"
-            : "Insight";
       if (el.dataset["cmsImage"] !== undefined) return "Image";
       if (el.dataset["cms"] !== undefined) return "Text";
       if (el.dataset["cmsItem"]?.startsWith("menu")) return "Menu";
@@ -328,7 +309,7 @@ export function StudioBridge() {
       }
     };
 
-    // The selected list item ("pillars:<id>") and one waiting to be scrolled into view once it renders.
+    // The selected item ("menu:<id>") and one waiting to be scrolled into view once it renders.
     let selectedItem: string | null = null;
     let selectedSection: string | null = null;
     let pendingFlash: string | null = null;
@@ -407,21 +388,15 @@ export function StudioBridge() {
     // (e.g. just after it loads), which would replace a draft already shown; re-apply the drafts
     // whenever that happens, so the canvas always shows the draft.
     let draftContent: Record<string, unknown> | null = null;
-    let draftLists: Record<string, unknown[]> | null = null;
     const applyDrafts = () => {
-      if (draftContent) {
-        const content = draftContent;
-        qc.setQueryData(
-          siteContentQuery.queryKey,
-          (old) => ({ ...(old ?? {}), ...content }) as never,
-        );
-      }
-      if (draftLists) {
-        const lists = draftLists;
-        qc.setQueryData(homeQuery.queryKey, (old) => ({ ...(old ?? {}), ...lists }) as never);
-      }
+      if (!draftContent) return;
+      const content = draftContent;
+      qc.setQueryData(
+        siteContentQuery.queryKey,
+        (old) => ({ ...(old ?? {}), ...content }) as never,
+      );
     };
-    const watched = [siteContentQuery.queryKey[0], homeQuery.queryKey[0]];
+    const watched = [siteContentQuery.queryKey[0]];
     const unsubscribeCache = qc.getQueryCache().subscribe((event) => {
       // Only real fetches: our own setQueryData calls are "manual" and would otherwise loop.
       if (
@@ -437,7 +412,6 @@ export function StudioBridge() {
       if (e.origin !== window.location.origin) return;
       if (e.data?.type === "studio-content") {
         draftContent = e.data.content;
-        if (e.data.lists) draftLists = e.data.lists;
         applyDrafts();
         requestAnimationFrame(() => {
           place();
@@ -571,15 +545,6 @@ export function StudioBridge() {
         else post({ type: "studio-move", section, dir: Number(arrow.dataset["dir"]) as -1 | 1 });
         return;
       }
-      // With a hotspot selected, a click in the biography moves that hotspot there.
-      const bio = t.closest<HTMLElement>(".site-bio-inner");
-      if (bio && parseItem(selectedItem)?.list === "hotspots" && !t.closest(".site-bio-point")) {
-        e.preventDefault();
-        e.stopPropagation();
-        const { x, y } = placeInBox(bio.getBoundingClientRect(), e.clientX, e.clientY);
-        post({ type: "studio-place", item: selectedItem!, x, y });
-        return;
-      }
       const section = t.closest<HTMLElement>("[data-cms-section]")?.dataset["cmsSection"] ?? null;
       const field =
         t.closest<HTMLElement>("[data-cms]")?.dataset["cms"] ??
@@ -614,7 +579,7 @@ export function StudioBridge() {
     window.addEventListener("click", onClick, true);
     window.addEventListener("scroll", place, { passive: true });
     window.addEventListener("resize", place);
-    // Pins also follow things opening and closing (accordions, card backs, hotspot panels):
+    // Pins also follow things opening and closing (the mobile menu, accordions):
     // their state attributes, and the end of their transitions.
     const stateObs = new MutationObserver(refreshComments);
     stateObs.observe(document.body, {

@@ -1,12 +1,12 @@
 /**
- * Studio functions for site_content rows (pages, settings, menus, the `lists` draft, the `pages`
- * index) and for publishing section lists. Visitors read live content through content.ts.
+ * Studio functions for site_content rows (pages, settings, menus, the `pages` index). Visitors
+ * read live content through content.ts.
  */
 import { createServerFn } from "@tanstack/react-start";
-import { and, eq, notInArray } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { asEditor } from "./access";
-import { rowData, type JsonObject } from "./shapes";
+import type { JsonObject } from "./shapes";
 
 export type SiteRow = { key: string; content: JsonObject; draft: JsonObject | null };
 
@@ -87,47 +87,4 @@ export const discardSiteDraft = createServerFn({ method: "POST" })
       .where(eq(siteContent.key, data.key))
       .returning({ data: siteContent.data });
     return row?.data ?? {};
-  });
-
-/**
- * Publishes edited section lists (spec section 4 → List items): each list given becomes exactly
- * its rows, in order (position = order); items no longer in it are deleted; the `lists` draft is
- * cleared. One batch, so a failure leaves the live lists as they were.
- */
-export const publishLists = createServerFn({ method: "POST" })
-  .middleware([asEditor])
-  .inputValidator(
-    z.object({
-      lists: z.record(z.string(), z.array(z.object({ id: z.string() }).passthrough())),
-    }),
-  )
-  .handler(async ({ data }) => {
-    const { d, listItems, siteContent, nowIso } = await load();
-    const writes = Object.entries(data.lists).flatMap(([list, rows]) => {
-      const ids = rows.map((r) => r.id);
-      return [
-        d
-          .delete(listItems)
-          .where(
-            ids.length
-              ? and(eq(listItems.list, list), notInArray(listItems.id, ids))
-              : eq(listItems.list, list),
-          ),
-        ...rows.map((r, position) => {
-          const values = { list, position, data: rowData(r) };
-          return d
-            .insert(listItems)
-            .values({ id: r.id, ...values })
-            .onConflictDoUpdate({ target: listItems.id, set: values });
-        }),
-      ];
-    });
-    await d.batch([
-      ...writes,
-      d
-        .update(siteContent)
-        .set({ draft: null, updatedAt: nowIso() })
-        .where(eq(siteContent.key, "lists")),
-    ] as unknown as Parameters<typeof d.batch>[0]);
-    return { ok: true };
   });

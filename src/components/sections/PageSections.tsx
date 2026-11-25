@@ -1,6 +1,4 @@
 import { Fragment } from "react";
-import { useSuspenseQuery, type QueryClient } from "@tanstack/react-query";
-import { homeQuery, investmentsQuery, postsQuery, publicationsQuery } from "@/lib/content";
 import { useSiteContent } from "@/lib/site-content";
 import { useStudioMode } from "@/lib/studio-mode";
 import {
@@ -10,102 +8,75 @@ import {
   type PageKey,
   type SectionInstance,
 } from "@/lib/page-sections";
+import { TEMPLATES, templateOf } from "@/lib/templates";
 import { sectionAnchor } from "@/lib/menus";
 import { useShow } from "@/lib/show-if";
-import { TextBlock, Pillars, StackCards, Bio } from "@/components/home/Sections";
-import { InsightsFeed } from "./InsightsFeed";
-import { InvestmentsGrid } from "./InvestmentsGrid";
-import { PublicationsIndex, PublicationsSelected } from "./Publications";
-import { Interactive } from "./Interactive";
+import { Footer, Header } from "@/components/SiteChrome";
 
-/** Any section can sit on any page, so every page preloads the data its sections may need. */
-export function ensureSectionData(qc: QueryClient) {
-  return Promise.all(
-    [homeQuery, postsQuery, investmentsQuery, publicationsQuery].map((q) =>
-      qc.ensureQueryData(q as never),
-    ),
+/** A section's field values (live, or the draft inside the Studio canvas). */
+function useFieldValues(inst: SectionInstance): Record<string, string> {
+  const site = useSiteContent() as unknown as Doc;
+  return Object.fromEntries(
+    Object.entries(inst.fields).map(([name, addr]) => [name, readField(site, addr)]),
   );
 }
 
-/** Reads a "key:path.to.field" CMS address from the site content (live, or the draft inside the Studio). */
-function useFieldValues(inst: SectionInstance): Record<string, string> {
-  const site = useSiteContent() as unknown as Doc;
-  const values = Object.fromEntries(
-    Object.entries(inst.fields).map(([name, addr]) => [name, readField(site, addr)]),
+/** Text: an optional heading and paragraphs (blank lines separate them). */
+function TextSection({ inst }: { inst: SectionInstance }) {
+  const t = useFieldValues(inst);
+  const show = useShow();
+  if (!show(t["heading"], t["body"])) return null;
+  return (
+    <section className="site-section site-text">
+      {show(t["heading"]) && <h2 data-cms={inst.fields["heading"]}>{t["heading"]}</h2>}
+      {show(t["body"]) && (
+        <div className="site-text-body" data-cms={inst.fields["body"]} data-cms-multiline>
+          {t["body"]}
+        </div>
+      )}
+    </section>
   );
-  // An interactive's file name is managed by the panel's file control, not a field of its own.
-  const html = inst.fields["html_url"];
-  if (inst.type === "interactive" && html)
-    values["file_name"] = readField(site, html.replace(/\.html_url$/, ".file_name"));
-  return values;
+}
+
+/** Image: one image with alt text and an optional caption, contained or full width. */
+function ImageSection({ inst }: { inst: SectionInstance }) {
+  const t = useFieldValues(inst);
+  const show = useShow();
+  const studio = useStudioMode();
+  if (!show(t["image_url"])) return null;
+  return (
+    <figure
+      className="site-section site-image"
+      data-width={t["width"] === "full" ? "full" : "contained"}
+    >
+      {t["image_url"] ? (
+        <img
+          src={t["image_url"]}
+          alt={t["alt"] ?? ""}
+          loading="lazy"
+          data-cms-image={inst.fields["image_url"]}
+        />
+      ) : (
+        studio && (
+          <div className="studio-placeholder" data-cms-image={inst.fields["image_url"]}>
+            Add an image — click to upload
+          </div>
+        )
+      )}
+      {show(t["caption"]) && (
+        <figcaption data-cms={inst.fields["caption"]}>{t["caption"]}</figcaption>
+      )}
+    </figure>
+  );
 }
 
 function Section({ inst }: { inst: SectionInstance }) {
-  const t = useFieldValues(inst);
-  const cms = inst.fields;
-  const show = useShow();
   switch (inst.type) {
-    case "statement":
-      return <TextBlock text={t["text"]!} cms={cms["text"]} />;
-    case "pillars":
-      return <PillarsSection />;
-    case "cards":
-      return <CardsSection text={{ eyebrow: t["eyebrow"]!, intro: t["intro"]! }} cms={cms} />;
-    case "bio":
-      return (
-        <BioSection
-          text={{
-            name: t["name"]!,
-            description: t["description"]!,
-            portrait_url: t["portrait_url"]!,
-            portrait_alt: t["portrait_alt"]!,
-          }}
-          cms={cms}
-        />
-      );
-    case "insights_list":
-      return <InsightsFeed label={t["label"]!} cms={cms["label"]} />;
-    case "investments_grid":
-      return <InvestmentsGrid disclaimer={t["disclaimer"]!} cms={cms["disclaimer"]} />;
-    case "publications_selected":
-      return <PublicationsSelected label={t["label"]!} cms={cms["label"]} />;
-    case "publications_index":
-      return <PublicationsIndex />;
-    case "footnote":
-      if (!show(t["text"])) return null;
-      return (
-        <section className="site-footnote-section">
-          <p className="site-publications-footnote" data-cms={cms["text"]} data-cms-multiline>
-            {t["text"]}
-          </p>
-        </section>
-      );
-    case "interactive":
-      return (
-        <Interactive
-          url={t["html_url"]!}
-          title={t["title"]!}
-          height={t["height"]!}
-          fileName={t["file_name"]!}
-          cms={cms}
-        />
-      );
+    case "text":
+      return <TextSection inst={inst} />;
+    case "image":
+      return <ImageSection inst={inst} />;
   }
-}
-
-function PillarsSection() {
-  const { data } = useSuspenseQuery(homeQuery);
-  return <Pillars pillars={data.pillars} />;
-}
-function CardsSection(p: Omit<React.ComponentProps<typeof StackCards>, "cards">) {
-  const { data } = useSuspenseQuery(homeQuery);
-  return <StackCards cards={data.cards} {...p} />;
-}
-function BioSection(p: Omit<React.ComponentProps<typeof Bio>, "hotspots">) {
-  const { data } = useSuspenseQuery(homeQuery);
-  return (
-    <Bio hotspots={data.hotspots.map((h) => ({ ...h, x: Number(h.x), y: Number(h.y) }))} {...p} />
-  );
 }
 
 /**
@@ -118,8 +89,6 @@ export function PageSections({ page }: { page: PageKey }) {
   const sections = resolveSections(page, doc);
   return (
     <>
-      {/* The hero's "Discover" button scrolls here, whichever section comes first. */}
-      <div id="page-sections" aria-hidden="true" />
       {sections.map((inst) =>
         studio ? (
           <div
@@ -129,7 +98,7 @@ export function PageSections({ page }: { page: PageKey }) {
             data-cms-reorder
             data-cms-insert
           >
-            {<Section inst={inst} />}
+            <Section inst={inst} />
           </div>
         ) : (
           <Fragment key={inst.id}>
@@ -148,14 +117,56 @@ export function PageSections({ page }: { page: PageKey }) {
   );
 }
 
-/** Wraps a page's pinned hero in the Studio canvas so it can be selected and have sections added after it. */
-export function StudioHero({ page, children }: { page: PageKey; children: React.ReactNode }) {
+/**
+ * The pinned hero every page starts with: its title (the page's one H1) and a short intro. In the
+ * Studio canvas it can be selected and have sections added after it, but not moved or deleted.
+ */
+function Hero({ page }: { page: PageKey }) {
+  const doc = (useSiteContent() as unknown as Doc)[page];
+  const show = useShow();
   const studio = useStudioMode();
+  const title = typeof doc?.["intro"]?.["title"] === "string" ? doc["intro"]["title"] : "";
+  const summary = typeof doc?.["intro"]?.["summary"] === "string" ? doc["intro"]["summary"] : "";
+  const hero = show(title, summary) && (
+    <section className="site-hero">
+      {show(title) && <h1 data-cms={`${page}:intro.title`}>{title}</h1>}
+      {show(summary) && (
+        <p className="site-hero-intro" data-cms={`${page}:intro.summary`} data-cms-multiline>
+          {summary}
+        </p>
+      )}
+    </section>
+  );
   return studio ? (
     <div data-cms-section={`${page}:hero`} data-cms-insert>
-      {children}
+      {hero}
     </div>
   ) : (
-    <>{children}</>
+    hero || null
+  );
+}
+
+/** A whole page: header, pinned hero (if its template has one), sections, footer. */
+export function PageView({ page, fallbackTitle }: { page: PageKey; fallbackTitle: string }) {
+  const doc = (useSiteContent() as unknown as Doc)[page];
+  const studio = useStudioMode();
+  const hasHero = TEMPLATES[templateOf(page, doc)].hero;
+  return (
+    <>
+      <Header />
+      <main id="main" className="site-main">
+        {/* Without a hero, keep one page heading for screen readers and search engines. */}
+        {hasHero ? <Hero page={page} /> : <h1 className="sr-only">{fallbackTitle}</h1>}
+        <PageSections page={page} />
+      </main>
+      {/* In the canvas the footer is selectable as a whole: its text is site-wide (Settings). */}
+      {studio ? (
+        <div data-cms-section="settings:footer">
+          <Footer />
+        </div>
+      ) : (
+        <Footer />
+      )}
+    </>
   );
 }

@@ -1,15 +1,11 @@
 /**
- * Flexible page sections. Every page is its pinned hero followed by an ordered list of
- * sections that can be added, moved and deleted in the Content Studio. Any section type can
- * go on any page. Text sections can repeat; sections fed by a shared list (pillars, cards,
- * hotspots, insights, investments, publications) appear at most once per page.
+ * Flexible page sections. Every page is its pinned hero (title + intro, see PageView) followed by
+ * an ordered list of sections that can be added, moved and deleted in the Content Studio. The
+ * platform ships two section types, Text and Image; both can repeat.
  *
  * Storage, per page row in site_content:
  *   sections:     string[]                       — section ids in page order
- *   section_data: { [id]: { type, ...fields } }  — own text for sections added in the Studio
- * Sections that existed before this model ("legacy" ids such as home "intro") keep reading
- * their original fields, so no content had to be migrated. A page with no `sections` yet
- * uses its default order, which reproduces the layout it had before.
+ *   section_data: { [id]: { type, ...fields } }  — each section's own content
  */
 
 import type { PageKey } from "./pages";
@@ -17,178 +13,56 @@ import { TEMPLATES, templateOf } from "./templates";
 export type { PageKey } from "./pages";
 export { isPageKey } from "./pages";
 
-export type SectionType =
-  | "statement"
-  | "pillars"
-  | "cards"
-  | "bio"
-  | "insights_list"
-  | "investments_grid"
-  | "publications_selected"
-  | "publications_index"
-  | "footnote"
-  | "interactive";
+export type SectionType = "text" | "image";
 
 export type SectionField = {
   name: string;
   label: string;
   multi?: boolean;
   image?: boolean;
-  /** An uploaded file (not an image); the panel shows upload / restore / preview controls. */
-  file?: { accept: string };
   /** A choice from fixed options, shown as a select. */
   options?: Array<{ value: string; label: string }>;
-  siteWide?: boolean;
 };
 
 export type SectionDef = {
   label: string;
-  /** Text sections can appear many times; list-fed sections once per page. */
+  /** Repeatable sections can appear many times on a page; others once. */
   repeatable: boolean;
   fields: SectionField[];
   defaults: Record<string, string>;
-  /** Shared list whose items this section shows (edited in the side panel or in Records). */
-  list?: "pillars" | "cards" | "hotspots";
-  /** Where the section's items come from, when they are edited elsewhere. */
-  source?: string;
 };
 
 export const SECTION_TYPES: Record<SectionType, SectionDef> = {
-  statement: {
-    label: "Statement",
+  text: {
+    label: "Text",
     repeatable: true,
-    fields: [{ name: "text", label: "Text", multi: true }],
-    defaults: { text: "Write your statement here." },
-  },
-  pillars: { label: "Pillars", repeatable: false, fields: [], defaults: {}, list: "pillars" },
-  cards: {
-    label: "Stacking cards",
-    repeatable: false,
-    list: "cards",
     fields: [
-      { name: "eyebrow", label: "Heading" },
-      { name: "intro", label: "Intro", multi: true },
+      { name: "heading", label: "Heading" },
+      { name: "body", label: "Text", multi: true },
     ],
-    defaults: { eyebrow: "Heading", intro: "Introduce the cards here." },
+    defaults: { heading: "A heading", body: "Write your text here." },
   },
-  bio: {
-    label: "Biography",
-    repeatable: false,
-    list: "hotspots",
-    fields: [
-      { name: "name", label: "Name" },
-      { name: "description", label: "Description", multi: true },
-      { name: "portrait_url", label: "Portrait", image: true },
-      { name: "portrait_alt", label: "Portrait description (alt text)" },
-    ],
-    defaults: {
-      name: "Name",
-      description: "A short biography.",
-      portrait_url: "",
-      portrait_alt: "",
-    },
-  },
-  insights_list: {
-    label: "Insights feed",
-    repeatable: false,
-    source: "Insights",
-    fields: [{ name: "label", label: "List label" }],
-    defaults: { label: "More insights" },
-  },
-  investments_grid: {
-    label: "Investments grid",
-    repeatable: false,
-    source: "Records → Investments",
-    fields: [{ name: "disclaimer", label: "Disclaimer (site-wide)", multi: true, siteWide: true }],
-    defaults: {},
-  },
-  publications_selected: {
-    label: "Selected publications",
-    repeatable: false,
-    source: "Records → Publications (pinned pieces)",
-    fields: [{ name: "label", label: "Label" }],
-    defaults: { label: "Selected work" },
-  },
-  publications_index: {
-    label: "Publications index",
-    repeatable: false,
-    source: "Records → Publications",
-    fields: [],
-    defaults: {},
-  },
-  footnote: {
-    label: "Small print",
+  image: {
+    label: "Image",
     repeatable: true,
-    fields: [{ name: "text", label: "Text", multi: true }],
-    defaults: { text: "Small print." },
-  },
-  interactive: {
-    label: "Interactive",
-    repeatable: false,
-    // `file_name`, `previous_url` and `previous_name` also live in section_data; the file
-    // control manages them, so they aren't panel fields.
     fields: [
-      { name: "html_url", label: "HTML file", file: { accept: ".html,.htm,text/html" } },
-      { name: "title", label: "Title (for screen readers)" },
+      { name: "image_url", label: "Image", image: true },
+      { name: "alt", label: "Image description (alt text)" },
+      { name: "caption", label: "Caption" },
       {
-        name: "height",
-        label: "Height",
+        name: "width",
+        label: "Width",
         options: [
-          { value: "content", label: "Fit content: scrolls with the page" },
-          {
-            value: "screen",
-            label: "Full screen: scrolls inside (for pop-ups that cover the screen)",
-          },
+          { value: "contained", label: "Contained: within the text column" },
+          { value: "full", label: "Full width: edge to edge" },
         ],
       },
     ],
-    defaults: {
-      html_url: "",
-      file_name: "",
-      previous_url: "",
-      previous_name: "",
-      title: "Interactive",
-      height: "content",
-    },
+    defaults: { image_url: "", alt: "", caption: "", width: "contained" },
   },
 };
 
 export const SECTION_ORDER = Object.keys(SECTION_TYPES) as SectionType[];
-
-type Legacy = { type: SectionType; fields: Record<string, string> };
-
-/** Sections that existed before flexible pages, with the fields they already read. */
-const LEGACY: Partial<Record<PageKey, Record<string, Legacy>>> = {
-  home: {
-    intro: { type: "statement", fields: { text: "home:intro.text" } },
-    pillars: { type: "pillars", fields: {} },
-    what: { type: "cards", fields: { eyebrow: "home:what.eyebrow", intro: "home:what.intro" } },
-    bio: {
-      type: "bio",
-      fields: {
-        name: "home:bio.name",
-        description: "home:bio.description",
-        portrait_url: "home:bio.portrait_url",
-        portrait_alt: "home:bio.portrait_alt",
-      },
-    },
-  },
-  insights: { list: { type: "insights_list", fields: { label: "insights:list_label" } } },
-  investments: { grid: { type: "investments_grid", fields: {} } },
-  publications: {
-    selected: { type: "publications_selected", fields: { label: "publications:selected_label" } },
-    index: { type: "publications_index", fields: {} },
-    footnote: { type: "footnote", fields: { text: "publications:footnote" } },
-  },
-};
-
-/** The order each page had before flexible sections. */
-export const DEFAULT_ORDER: Partial<Record<PageKey, string[]>> = {
-  home: ["intro", "pillars", "what", "bio"],
-  insights: ["list"],
-  investments: ["grid"],
-  publications: ["selected", "index", "footnote"],
-};
 
 /** A page row's content: free-form JSON edited in the Studio (same shape the draft helpers use). */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -213,11 +87,9 @@ export type SectionInstance = {
   fields: Record<string, string>;
 };
 
-export function sectionOrder(page: PageKey, doc: Doc | null | undefined): string[] {
+export function sectionOrder(_page: PageKey, doc: Doc | null | undefined): string[] {
   const s = doc?.["sections"];
-  return Array.isArray(s)
-    ? s.filter((x): x is string => typeof x === "string")
-    : (DEFAULT_ORDER[page] ?? []);
+  return Array.isArray(s) ? s.filter((x): x is string => typeof x === "string") : [];
 }
 
 /** Resolves one section id on a page, or null if it isn't a known section. */
@@ -227,35 +99,17 @@ export function resolveSection(
   id: string,
 ): SectionInstance | null {
   const own = doc?.["section_data"]?.[id];
-  if (own && own.type in SECTION_TYPES) {
-    const type = own.type as SectionType;
-    const fields = Object.fromEntries(
-      SECTION_TYPES[type].fields.map((f) => [
-        f.name,
-        f.siteWide ? siteWideField(f.name) : `${page}:section_data.${id}.${f.name}`,
-      ]),
-    );
-    return { id, type, fields };
-  }
-  const legacy = LEGACY[page]?.[id];
-  if (!legacy) return null;
-  const extra = Object.fromEntries(
-    SECTION_TYPES[legacy.type].fields
-      .filter((f) => f.siteWide)
-      .map((f) => [f.name, siteWideField(f.name)]),
+  if (!own || !(own.type in SECTION_TYPES)) return null;
+  const type = own.type as SectionType;
+  const fields = Object.fromEntries(
+    SECTION_TYPES[type].fields.map((f) => [f.name, `${page}:section_data.${id}.${f.name}`]),
   );
-  return { id, type: legacy.type, fields: { ...extra, ...legacy.fields } };
-}
-
-function siteWideField(name: string): string {
-  if (name === "disclaimer") return "settings:investments_disclaimer";
-  return `settings:${name}`;
+  return { id, type, fields };
 }
 
 /**
  * The page's sections in order. Sections whose type the page's template doesn't allow are
- * skipped: a template switch clears sections anyway, so this is only a guard against a
- * mismatched page (e.g. an interactive on a Standard page).
+ * skipped (a guard against a page saved under another template).
  */
 export function resolveSections(page: PageKey, doc: Doc | null | undefined): SectionInstance[] {
   const allowed = TEMPLATES[templateOf(page, doc)].allowed;
@@ -266,7 +120,7 @@ export function resolveSections(page: PageKey, doc: Doc | null | undefined): Sec
 
 /**
  * Section types the + menu can offer on a page: the ones its template allows that are
- * repeatable, plus list-fed ones not yet on it.
+ * repeatable, plus once-per-page ones not yet on it.
  */
 export function availableTypes(page: PageKey, doc: Doc | null | undefined): SectionType[] {
   const allowed = TEMPLATES[templateOf(page, doc)].allowed;
@@ -284,8 +138,7 @@ export function isRequired(page: PageKey, doc: Doc | null | undefined, id: strin
 }
 
 /**
- * Adds a section after `afterId` (null = straight after the hero). Re-adding a type the page
- * used to have brings back its original section and content rather than starting empty.
+ * Adds a section after `afterId` (null = straight after the hero), with its type's defaults.
  * Returns the new doc and the new section's id, or null if the type isn't allowed.
  */
 export function insertSection(
@@ -297,13 +150,9 @@ export function insertSection(
 ): { doc: Doc; id: string } | null {
   if (!availableTypes(page, doc).includes(type)) return null;
   const order = sectionOrder(page, doc);
-  const restored = Object.entries(LEGACY[page] ?? {}).find(
-    ([id, l]) => l.type === type && !order.includes(id),
-  )?.[0];
-  const id = restored ?? newId;
+  const id = newId;
   const at = afterId == null ? 0 : order.indexOf(afterId) + 1 || order.length;
   const sections = [...order.slice(0, at), id, ...order.slice(at)];
-  if (restored) return { doc: { ...doc, sections }, id };
   const section_data = {
     ...(doc["section_data"] ?? {}),
     [id]: { type, ...SECTION_TYPES[type].defaults },
@@ -312,8 +161,8 @@ export function insertSection(
 }
 
 /**
- * Removes a section from the page. Original sections keep their content so they can be re-added.
- * A section the template requires is never removed (the doc comes back unchanged).
+ * Removes a section and its content from the page. A section the template requires is never
+ * removed (the doc comes back unchanged).
  */
 export function removeSection(page: PageKey, doc: Doc, id: string): Doc {
   if (isRequired(page, doc, id)) return doc;

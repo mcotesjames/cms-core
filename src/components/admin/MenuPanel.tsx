@@ -26,10 +26,7 @@ import {
   type Menus,
 } from "@/lib/menus";
 
-type Ctx = {
-  posts: Array<{ id: string; slug: string; title: string }>;
-  site: Record<string, unknown>;
-};
+type Ctx = { site: Record<string, unknown> };
 
 const SELECT = "h-10 w-full rounded-md border border-input bg-background px-3 text-sm";
 const uid = () => crypto.randomUUID().slice(0, 8);
@@ -184,22 +181,6 @@ export function MenuPanel(p: {
               {pageOptions.map((pg) => (
                 <option key={pg.key} value={pg.key}>
                   {pg.label}
-                </option>
-              ))}
-            </select>
-          </PanelField>
-        )}
-        {t.kind === "insight" && (
-          <PanelField label="Insight (published)">
-            <select
-              className={SELECT}
-              value={t.id}
-              onChange={(e) => setTarget({ kind: "insight", id: e.target.value })}
-            >
-              <option value="">Choose an insight…</option>
-              {ctx.posts.map((post) => (
-                <option key={post.id} value={post.id}>
-                  {post.title}
                 </option>
               ))}
             </select>

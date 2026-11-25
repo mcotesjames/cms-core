@@ -9,23 +9,12 @@ function Settings() {
       contentKey="settings"
       title="Site settings"
       sections={[
-        { title: "Navigation", fields: [{ path: "substack_url", label: "Substack link" }] },
         {
           title: "Footer",
           fields: [
             { path: "footer_heading", label: "Heading" },
-            { path: "footer_tagline", label: "Tagline", type: "textarea" },
-            { path: "contact_email", label: "Contact email" },
-          ],
-        },
-        {
-          title: "Enquiries",
-          fields: [{ path: "enquiry_recipient", label: "Enquiry recipient email" }],
-        },
-        {
-          title: "Disclaimers",
-          fields: [
-            { path: "investments_disclaimer", label: "Investments disclaimer", type: "textarea" },
+            { path: "footer_tagline", label: "Text", type: "textarea" },
+            { path: "contact_email", label: "Contact email (used by the footer menu's default)" },
           ],
         },
         {

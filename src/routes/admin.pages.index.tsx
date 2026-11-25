@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { usePages } from "@/components/admin/usePages";
 import { NewPageDialog } from "@/components/admin/NewPageDialog";
 import type { PageInfo } from "@/lib/pages";
-import { TEMPLATES, templateOf } from "@/lib/templates";
+import { TEMPLATES, templateOf, type TemplateKey } from "@/lib/templates";
 
 export const Route = createFileRoute("/admin/pages/")({ component: PagesList });
 
@@ -29,17 +29,18 @@ function status(p: PageInfo, hasDraft: boolean) {
   return { label: "Live", variant: "default" as const };
 }
 
-/** "Standard", or "Standard → Interactive (unpublished)" when the draft switches template. */
+/** "Standard", or "Standard → Landing (unpublished)" when the draft switches template. */
 function templateLabel(p: PageInfo, row: { content: unknown; draft: unknown } | undefined) {
-  const live = templateOf(p.key, row?.content as Record<string, unknown> | undefined);
-  const draft = row?.draft != null ? templateOf(p.key, row.draft as Record<string, unknown>) : live;
-  return draft === live
+  const live: TemplateKey = templateOf(p.key, row?.content as Record<string, unknown> | undefined);
+  const draft: TemplateKey =
+    row?.draft != null ? templateOf(p.key, row.draft as Record<string, unknown>) : live;
+  return String(draft) === String(live)
     ? TEMPLATES[live].label
     : `${TEMPLATES[live].label} → ${TEMPLATES[draft].label} (unpublished)`;
 }
 
 /**
- * Pages, managed like Insights: Edit opens the visual editor, Settings the page's settings (name,
+ * Pages: Edit opens the visual editor, Settings the page's settings (name,
  * web address, search & sharing). Any page can be duplicated; pages made here can be deleted.
  */
 function PagesList() {
@@ -113,8 +114,7 @@ function PagesList() {
         })}
       </ul>
       <p className="mt-3 text-xs text-muted-foreground">
-        Built-in pages (the first four) keep their web addresses and can't be deleted. Everything
-        else works the same.
+        The homepage keeps its web address and can't be deleted. Everything else works the same.
       </p>
     </div>
   );

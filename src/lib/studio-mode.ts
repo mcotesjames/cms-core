@@ -21,27 +21,22 @@ export type StudioMessage =
   | { type: "studio-ready" }
   | { type: "studio-edit"; field: string; value: string }
   | { type: "studio-image"; field: string }
-  /** Draft page/settings content to show; `lists` replaces the shared lists (pillars, cards, hotspots). */
+  /** Draft page, settings and menus content to show. */
   | {
       type: "studio-content";
       content: Record<string, unknown>;
-      lists?: Record<string, unknown[]> | undefined;
     }
-  /** section is a "key:name" address (e.g. home:pillars); field is set when a text was clicked; item when a list item ("pillars:<id>") was clicked. */
+  /** section is a "key:name" address (e.g. home:hero); field is set when a text was clicked; item when a menu link or column ("menu:<id>") was clicked. */
   | {
       type: "studio-select";
       section: string | null;
       field?: string | undefined;
       item?: string | undefined;
     }
-  /** A click in the biography while a hotspot is selected: its new position in %. */
-  | { type: "studio-place"; item: string; x: number; y: number }
   | { type: "studio-move"; section: string; dir: -1 | 1 }
   /** "+" on a block: add a new block after it. */
   | { type: "studio-insert"; section: string }
-  /** Article canvas: the whole draft article to render. */
-  | { type: "studio-article"; post: unknown }
-  /** Highlights the selected section and list item; scroll brings the item into view (after adding it from the panel). */
+  /** Highlights the selected section and item; scroll brings the item into view (after adding it from the panel). */
   | {
       type: "studio-selected";
       section: string | null;

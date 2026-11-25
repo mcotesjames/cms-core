@@ -12,24 +12,15 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SlugRouteImport } from './routes/$slug'
 import { Route as AdminRouteImport } from './routes/admin'
-import { Route as InvestmentsRouteImport } from './routes/investments'
-import { Route as PublicationsRouteImport } from './routes/publications'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminFeedbackRouteImport } from './routes/admin.feedback'
-import { Route as AdminInvestmentsRouteImport } from './routes/admin.investments'
 import { Route as AdminMediaRouteImport } from './routes/admin.media'
-import { Route as AdminPublicationsRouteImport } from './routes/admin.publications'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
-import { Route as InsightsIndexRouteImport } from './routes/insights.index'
-import { Route as InsightsSlugRouteImport } from './routes/insights.$slug'
 import { Route as MediaSplatRouteImport } from './routes/media.$'
-import { Route as StudioArticleRouteImport } from './routes/studio.article'
-import { Route as AdminInsightSettingsIdRouteImport } from './routes/admin.insight-settings.$id'
 import { Route as AdminPageSettingsKeyRouteImport } from './routes/admin.page-settings.$key'
 import { Route as AdminPagesIndexRouteImport } from './routes/admin.pages.index'
-import { Route as AdminInsightsIdRouteImport } from './routes/admin_.insights.$id'
 import { Route as AdminPagesKeyRouteImport } from './routes/admin_.pages.$key'
 
 const IndexRoute = IndexRouteImport.update({
@@ -47,16 +38,6 @@ const AdminRoute = AdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
-const InvestmentsRoute = InvestmentsRouteImport.update({
-  id: '/investments',
-  path: '/investments',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PublicationsRoute = PublicationsRouteImport.update({
-  id: '/publications',
-  path: '/publications',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
@@ -72,19 +53,9 @@ const AdminFeedbackRoute = AdminFeedbackRouteImport.update({
   path: '/feedback',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminInvestmentsRoute = AdminInvestmentsRouteImport.update({
-  id: '/investments',
-  path: '/investments',
-  getParentRoute: () => AdminRoute,
-} as any)
 const AdminMediaRoute = AdminMediaRouteImport.update({
   id: '/media',
   path: '/media',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminPublicationsRoute = AdminPublicationsRouteImport.update({
-  id: '/publications',
-  path: '/publications',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminSettingsRoute = AdminSettingsRouteImport.update({
@@ -97,30 +68,10 @@ const AdminUsersRoute = AdminUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => AdminRoute,
 } as any)
-const InsightsIndexRoute = InsightsIndexRouteImport.update({
-  id: '/insights/',
-  path: '/insights/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const InsightsSlugRoute = InsightsSlugRouteImport.update({
-  id: '/insights/$slug',
-  path: '/insights/$slug',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const MediaSplatRoute = MediaSplatRouteImport.update({
   id: '/media/$',
   path: '/media/$',
   getParentRoute: () => rootRouteImport,
-} as any)
-const StudioArticleRoute = StudioArticleRouteImport.update({
-  id: '/studio/article',
-  path: '/studio/article',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminInsightSettingsIdRoute = AdminInsightSettingsIdRouteImport.update({
-  id: '/insight-settings/$id',
-  path: '/insight-settings/$id',
-  getParentRoute: () => AdminRoute,
 } as any)
 const AdminPageSettingsKeyRoute = AdminPageSettingsKeyRouteImport.update({
   id: '/page-settings/$key',
@@ -132,11 +83,6 @@ const AdminPagesIndexRoute = AdminPagesIndexRouteImport.update({
   path: '/pages/',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminInsightsIdRoute = AdminInsightsIdRouteImport.update({
-  id: '/admin_/insights/$id',
-  path: '/admin/insights/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AdminPagesKeyRoute = AdminPagesKeyRouteImport.update({
   id: '/admin_/pages/$key',
   path: '/admin/pages/$key',
@@ -147,46 +93,28 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$slug': typeof SlugRoute
   '/admin': typeof AdminRouteWithChildren
-  '/investments': typeof InvestmentsRoute
-  '/publications': typeof PublicationsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin/feedback': typeof AdminFeedbackRoute
-  '/admin/investments': typeof AdminInvestmentsRoute
   '/admin/media': typeof AdminMediaRoute
-  '/admin/publications': typeof AdminPublicationsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/users': typeof AdminUsersRoute
-  '/insights/$slug': typeof InsightsSlugRoute
   '/media/$': typeof MediaSplatRoute
-  '/studio/article': typeof StudioArticleRoute
   '/admin/': typeof AdminIndexRoute
-  '/insights/': typeof InsightsIndexRoute
-  '/admin/insight-settings/$id': typeof AdminInsightSettingsIdRoute
   '/admin/page-settings/$key': typeof AdminPageSettingsKeyRoute
-  '/admin/insights/$id': typeof AdminInsightsIdRoute
   '/admin/pages/$key': typeof AdminPagesKeyRoute
   '/admin/pages/': typeof AdminPagesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$slug': typeof SlugRoute
-  '/investments': typeof InvestmentsRoute
-  '/publications': typeof PublicationsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin/feedback': typeof AdminFeedbackRoute
-  '/admin/investments': typeof AdminInvestmentsRoute
   '/admin/media': typeof AdminMediaRoute
-  '/admin/publications': typeof AdminPublicationsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/users': typeof AdminUsersRoute
-  '/insights/$slug': typeof InsightsSlugRoute
   '/media/$': typeof MediaSplatRoute
-  '/studio/article': typeof StudioArticleRoute
   '/admin': typeof AdminIndexRoute
-  '/insights': typeof InsightsIndexRoute
-  '/admin/insight-settings/$id': typeof AdminInsightSettingsIdRoute
   '/admin/page-settings/$key': typeof AdminPageSettingsKeyRoute
-  '/admin/insights/$id': typeof AdminInsightsIdRoute
   '/admin/pages/$key': typeof AdminPagesKeyRoute
   '/admin/pages': typeof AdminPagesIndexRoute
 }
@@ -195,23 +123,14 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/$slug': typeof SlugRoute
   '/admin': typeof AdminRouteWithChildren
-  '/investments': typeof InvestmentsRoute
-  '/publications': typeof PublicationsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin/feedback': typeof AdminFeedbackRoute
-  '/admin/investments': typeof AdminInvestmentsRoute
   '/admin/media': typeof AdminMediaRoute
-  '/admin/publications': typeof AdminPublicationsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/users': typeof AdminUsersRoute
-  '/insights/$slug': typeof InsightsSlugRoute
   '/media/$': typeof MediaSplatRoute
-  '/studio/article': typeof StudioArticleRoute
   '/admin/': typeof AdminIndexRoute
-  '/insights/': typeof InsightsIndexRoute
-  '/admin/insight-settings/$id': typeof AdminInsightSettingsIdRoute
   '/admin/page-settings/$key': typeof AdminPageSettingsKeyRoute
-  '/admin_/insights/$id': typeof AdminInsightsIdRoute
   '/admin_/pages/$key': typeof AdminPagesKeyRoute
   '/admin/pages/': typeof AdminPagesIndexRoute
 }
@@ -221,46 +140,28 @@ export interface FileRouteTypes {
     | '/'
     | '/$slug'
     | '/admin'
-    | '/investments'
-    | '/publications'
     | '/sitemap.xml'
     | '/admin/feedback'
-    | '/admin/investments'
     | '/admin/media'
-    | '/admin/publications'
     | '/admin/settings'
     | '/admin/users'
-    | '/insights/$slug'
     | '/media/$'
-    | '/studio/article'
     | '/admin/'
-    | '/insights/'
-    | '/admin/insight-settings/$id'
     | '/admin/page-settings/$key'
-    | '/admin/insights/$id'
     | '/admin/pages/$key'
     | '/admin/pages/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/$slug'
-    | '/investments'
-    | '/publications'
     | '/sitemap.xml'
     | '/admin/feedback'
-    | '/admin/investments'
     | '/admin/media'
-    | '/admin/publications'
     | '/admin/settings'
     | '/admin/users'
-    | '/insights/$slug'
     | '/media/$'
-    | '/studio/article'
     | '/admin'
-    | '/insights'
-    | '/admin/insight-settings/$id'
     | '/admin/page-settings/$key'
-    | '/admin/insights/$id'
     | '/admin/pages/$key'
     | '/admin/pages'
   id:
@@ -268,23 +169,14 @@ export interface FileRouteTypes {
     | '/'
     | '/$slug'
     | '/admin'
-    | '/investments'
-    | '/publications'
     | '/sitemap.xml'
     | '/admin/feedback'
-    | '/admin/investments'
     | '/admin/media'
-    | '/admin/publications'
     | '/admin/settings'
     | '/admin/users'
-    | '/insights/$slug'
     | '/media/$'
-    | '/studio/article'
     | '/admin/'
-    | '/insights/'
-    | '/admin/insight-settings/$id'
     | '/admin/page-settings/$key'
-    | '/admin_/insights/$id'
     | '/admin_/pages/$key'
     | '/admin/pages/'
   fileRoutesById: FileRoutesById
@@ -293,14 +185,8 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SlugRoute: typeof SlugRoute
   AdminRoute: typeof AdminRouteWithChildren
-  InvestmentsRoute: typeof InvestmentsRoute
-  PublicationsRoute: typeof PublicationsRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
-  InsightsSlugRoute: typeof InsightsSlugRoute
   MediaSplatRoute: typeof MediaSplatRoute
-  StudioArticleRoute: typeof StudioArticleRoute
-  InsightsIndexRoute: typeof InsightsIndexRoute
-  AdminInsightsIdRoute: typeof AdminInsightsIdRoute
   AdminPagesKeyRoute: typeof AdminPagesKeyRoute
 }
 
@@ -327,20 +213,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/investments': {
-      id: '/investments'
-      path: '/investments'
-      fullPath: '/investments'
-      preLoaderRoute: typeof InvestmentsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/publications': {
-      id: '/publications'
-      path: '/publications'
-      fullPath: '/publications'
-      preLoaderRoute: typeof PublicationsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/sitemap.xml': {
       id: '/sitemap.xml'
       path: '/sitemap.xml'
@@ -362,25 +234,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminFeedbackRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/admin/investments': {
-      id: '/admin/investments'
-      path: '/investments'
-      fullPath: '/admin/investments'
-      preLoaderRoute: typeof AdminInvestmentsRouteImport
-      parentRoute: typeof AdminRoute
-    }
     '/admin/media': {
       id: '/admin/media'
       path: '/media'
       fullPath: '/admin/media'
       preLoaderRoute: typeof AdminMediaRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/publications': {
-      id: '/admin/publications'
-      path: '/publications'
-      fullPath: '/admin/publications'
-      preLoaderRoute: typeof AdminPublicationsRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/settings': {
@@ -397,40 +255,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminUsersRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/insights/': {
-      id: '/insights/'
-      path: '/insights'
-      fullPath: '/insights/'
-      preLoaderRoute: typeof InsightsIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/insights/$slug': {
-      id: '/insights/$slug'
-      path: '/insights/$slug'
-      fullPath: '/insights/$slug'
-      preLoaderRoute: typeof InsightsSlugRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/media/$': {
       id: '/media/$'
       path: '/media/$'
       fullPath: '/media/$'
       preLoaderRoute: typeof MediaSplatRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/studio/article': {
-      id: '/studio/article'
-      path: '/studio/article'
-      fullPath: '/studio/article'
-      preLoaderRoute: typeof StudioArticleRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/insight-settings/$id': {
-      id: '/admin/insight-settings/$id'
-      path: '/insight-settings/$id'
-      fullPath: '/admin/insight-settings/$id'
-      preLoaderRoute: typeof AdminInsightSettingsIdRouteImport
-      parentRoute: typeof AdminRoute
     }
     '/admin/page-settings/$key': {
       id: '/admin/page-settings/$key'
@@ -446,13 +276,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminPagesIndexRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/admin_/insights/$id': {
-      id: '/admin_/insights/$id'
-      path: '/admin/insights/$id'
-      fullPath: '/admin/insights/$id'
-      preLoaderRoute: typeof AdminInsightsIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/admin_/pages/$key': {
       id: '/admin_/pages/$key'
       path: '/admin/pages/$key'
@@ -465,26 +288,20 @@ declare module '@tanstack/react-router' {
 
 interface AdminRouteChildren {
   AdminFeedbackRoute: typeof AdminFeedbackRoute
-  AdminInvestmentsRoute: typeof AdminInvestmentsRoute
   AdminMediaRoute: typeof AdminMediaRoute
-  AdminPublicationsRoute: typeof AdminPublicationsRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminUsersRoute: typeof AdminUsersRoute
   AdminIndexRoute: typeof AdminIndexRoute
-  AdminInsightSettingsIdRoute: typeof AdminInsightSettingsIdRoute
   AdminPageSettingsKeyRoute: typeof AdminPageSettingsKeyRoute
   AdminPagesIndexRoute: typeof AdminPagesIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminFeedbackRoute: AdminFeedbackRoute,
-  AdminInvestmentsRoute: AdminInvestmentsRoute,
   AdminMediaRoute: AdminMediaRoute,
-  AdminPublicationsRoute: AdminPublicationsRoute,
   AdminSettingsRoute: AdminSettingsRoute,
   AdminUsersRoute: AdminUsersRoute,
   AdminIndexRoute: AdminIndexRoute,
-  AdminInsightSettingsIdRoute: AdminInsightSettingsIdRoute,
   AdminPageSettingsKeyRoute: AdminPageSettingsKeyRoute,
   AdminPagesIndexRoute: AdminPagesIndexRoute,
 }
@@ -495,14 +312,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SlugRoute: SlugRoute,
   AdminRoute: AdminRouteWithChildren,
-  InvestmentsRoute: InvestmentsRoute,
-  PublicationsRoute: PublicationsRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
-  InsightsSlugRoute: InsightsSlugRoute,
   MediaSplatRoute: MediaSplatRoute,
-  StudioArticleRoute: StudioArticleRoute,
-  InsightsIndexRoute: InsightsIndexRoute,
-  AdminInsightsIdRoute: AdminInsightsIdRoute,
   AdminPagesKeyRoute: AdminPagesKeyRoute,
 }
 export const routeTree = rootRouteImport

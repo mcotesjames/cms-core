@@ -12,14 +12,6 @@ export const Route = createFileRoute("/admin")({
 
 const GROUPS = [
   { label: "Feedback", items: [{ to: "/admin/feedback", label: "Feedback" }] },
-  { label: "Content", items: [{ to: "/admin", label: "Insights", exact: true }] },
-  {
-    label: "Records",
-    items: [
-      { to: "/admin/investments", label: "Investments" },
-      { to: "/admin/publications", label: "Publications" },
-    ],
-  },
   { label: "Pages", items: [{ to: "/admin/pages", label: "Pages" }] },
   { label: "Library", items: [{ to: "/admin/media", label: "Media" }] },
   {
@@ -75,10 +67,7 @@ function AdminLayout() {
                     <li key={it.label}>
                       <Link
                         to={it.to}
-                        activeOptions={{
-                          exact: "exact" in it ? it.exact : false,
-                          includeSearch: false,
-                        }}
+                        activeOptions={{ includeSearch: false }}
                         className="flex items-center justify-between gap-2 rounded-sm px-3 py-1.5 text-sm hover:bg-accent data-[status=active]:bg-primary data-[status=active]:text-primary-foreground"
                       >
                         {it.label}

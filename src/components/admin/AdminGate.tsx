@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SITE_NAME } from "@/lib/seo";
 import { devSignIn, getMe, setMyName } from "@/data/users";
-import brandLogo from "@/assets/brand/wordmark-dark.svg";
+import { Logo } from "@/components/SiteChrome";
 import { AdminUserContext, type AdminUser } from "./adminUser";
 
 export const meQuery = queryOptions({ queryKey: ["admin", "me"], queryFn: () => getMe() });
@@ -133,9 +133,9 @@ function NamePrompt({ onSaved }: { onSaved: (first: string, last: string) => voi
   );
 }
 
-/** The site wordmark (the one used in the site footer), shown white on the dark Studio screens. */
+/** The site's wordmark on the sign-in screens (the text logo until a site's own comes from its configuration). */
 function BrandLogo() {
-  return <img src={brandLogo} alt={SITE_NAME} className="block h-auto w-32 brightness-0 invert" />;
+  return <Logo className="block" />;
 }
 
 /** Marks a Content Studio screen so the admin dark theme in styles.css applies (`:root:has(.studio)`). */

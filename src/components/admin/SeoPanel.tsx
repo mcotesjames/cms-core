@@ -65,7 +65,7 @@ function Counter({ n, limit }: { n: number; limit: number }) {
 }
 
 /**
- * Search & sharing settings for a page or insight: a Google-style preview, then search title,
+ * Search & sharing settings for a page: a Google-style preview, then search title,
  * description and share image — each automatic unless typed in — and, under More, hiding from
  * search engines plus anything page-specific (`more`). Changes save to the draft like any edit.
  */

@@ -2,66 +2,100 @@ import { describe, expect, it } from "vitest";
 import {
   availableTypes,
   insertSection,
+  isRequired,
+  readField,
   removeSection,
+  resolveSection,
   resolveSections,
   sectionOrder,
 } from "@/lib/page-sections";
 
-const home = { hero: {}, intro: { text: "Hi" }, sections: ["intro", "pillars", "what", "bio"] };
+const home = {
+  intro: { title: "Welcome", summary: "Hi" },
+  sections: ["a", "b"],
+  section_data: {
+    a: { type: "text", heading: "About", body: "One" },
+    b: {
+      type: "image",
+      image_url: "https://example.com/x.jpg",
+      alt: "",
+      caption: "",
+      width: "full",
+    },
+  },
+};
 
 describe("flexible page sections", () => {
-  it("existing sections keep reading their original fields", () => {
+  it("resolves each section to its own field addresses, in page order", () => {
     const s = resolveSections("home", home);
-    expect(s.map((x) => x.type)).toEqual(["statement", "pillars", "cards", "bio"]);
-    expect(s[0]!.fields).toEqual({ text: "home:intro.text" });
-  });
-
-  it("pages without a saved order show the layout they had before", () => {
-    expect(sectionOrder("publications", {})).toEqual(["selected", "index", "footnote"]);
-    expect(resolveSections("investments", {}).map((x) => x.type)).toEqual(["investments_grid"]);
-    expect(resolveSections("investments", {})[0]!.fields).toEqual({
-      disclaimer: "settings:investments_disclaimer",
+    expect(s.map((x) => x.type)).toEqual(["text", "image"]);
+    expect(s[0]!.fields).toEqual({
+      heading: "home:section_data.a.heading",
+      body: "home:section_data.a.body",
     });
+    expect(Object.keys(s[1]!.fields)).toEqual(["image_url", "alt", "caption", "width"]);
+    expect(readField({ home }, s[0]!.fields["heading"]!)).toBe("About");
+    expect(readField({ home }, "home:section_data.zz.heading")).toBe("");
   });
 
-  it("list-fed sections are offered once per page; text sections always", () => {
-    const t = availableTypes("home", home);
-    expect(t).not.toContain("pillars");
-    expect(t).toContain("statement");
-    expect(t).toContain("investments_grid");
+  it("a page with no saved order has no sections; unknown ids and types are skipped", () => {
+    expect(sectionOrder("home", {})).toEqual([]);
+    expect(sectionOrder("home", { sections: ["a", 3, null] })).toEqual(["a"]);
+    expect(resolveSections("page_abc", null)).toEqual([]);
+    const odd = { sections: ["a", "x", "y"], section_data: { y: { type: "pillars" } } };
+    expect(
+      resolveSections("home", {
+        ...odd,
+        section_data: { ...home.section_data, ...odd.section_data },
+      }).map((s) => s.id),
+    ).toEqual(["a"]);
+    expect(resolveSection("home", odd, "y")).toBeNull();
   });
 
-  it("adds a new text section with its own content after the chosen section", () => {
-    const r = insertSection("home", home, "pillars", "statement", "s1")!;
-    expect(r.doc["sections"]).toEqual(["intro", "pillars", "s1", "what", "bio"]);
-    expect(r.doc["section_data"].s1).toMatchObject({ type: "statement" });
-    expect(resolveSections("home", r.doc)[2]!.fields).toEqual({
-      text: "home:section_data.s1.text",
+  it("text and image sections are both repeatable, so both are always offered", () => {
+    expect(availableTypes("home", home)).toEqual(["text", "image"]);
+    expect(availableTypes("page_abc", {})).toEqual(["text", "image"]);
+  });
+
+  it("adds a section with its type's defaults after the chosen section", () => {
+    const r = insertSection("home", home, "a", "text", "s1")!;
+    expect(r.id).toBe("s1");
+    expect(r.doc["sections"]).toEqual(["a", "s1", "b"]);
+    expect(r.doc["section_data"].s1).toEqual({
+      type: "text",
+      heading: "A heading",
+      body: "Write your text here.",
     });
+    expect(resolveSections("home", r.doc)[1]!.fields["body"]).toBe("home:section_data.s1.body");
+    // The original doc is untouched.
+    expect(home.sections).toEqual(["a", "b"]);
   });
 
-  it("null adds straight after the hero", () => {
-    const r = insertSection("insights", {}, null, "statement", "s2")!;
-    expect(r.doc["sections"]).toEqual(["s2", "list"]);
+  it("null adds straight after the hero; an unknown anchor appends", () => {
+    expect(insertSection("home", home, null, "image", "s2")!.doc["sections"]).toEqual([
+      "s2",
+      "a",
+      "b",
+    ]);
+    expect(insertSection("home", home, "gone", "image", "s3")!.doc["sections"]).toEqual([
+      "a",
+      "b",
+      "s3",
+    ]);
+    const first = insertSection("page_abc", {}, null, "image", "s4")!;
+    expect(first.doc["sections"]).toEqual(["s4"]);
+    expect(first.doc["section_data"].s4).toMatchObject({ type: "image", width: "contained" });
   });
 
-  it("refuses a second copy of a list-fed section", () => {
-    expect(insertSection("home", home, "bio", "pillars", "s3")).toBeNull();
+  it("deleting a section removes it and its own content", () => {
+    const removed = removeSection("home", home, "a");
+    expect(removed["sections"]).toEqual(["b"]);
+    expect(removed["section_data"]).toEqual({ b: home.section_data.b });
+    expect(removed["intro"]).toEqual(home.intro);
   });
 
-  it("deleting an original section keeps its content, and re-adding brings it back", () => {
-    const removed = removeSection("home", home, "intro");
-    expect(removed["sections"]).toEqual(["pillars", "what", "bio"]);
-    expect(removed["intro"]).toEqual({ text: "Hi" });
-    const back = insertSection("home", removed, "bio", "statement", "s4")!;
-    expect(back.id).toBe("intro");
-    expect(back.doc["sections"]).toEqual(["pillars", "what", "bio", "intro"]);
-  });
-
-  it("deleting an added section removes its own content", () => {
-    const r = insertSection("home", home, null, "footnote", "s5")!;
-    const removed = removeSection("home", r.doc, "s5");
-    expect(removed["sections"]).toEqual(["intro", "pillars", "what", "bio"]);
-    expect(removed["section_data"]).toEqual({});
+  it("no section is required on a Standard page", () => {
+    expect(isRequired("home", home, "a")).toBe(false);
+    expect(isRequired("page_abc", home, "b")).toBe(false);
   });
 });

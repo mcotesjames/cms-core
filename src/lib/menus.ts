@@ -1,19 +1,17 @@
 /**
  * Site menus edited in the Content Studio: the main menu (header pill, also the mobile menu)
  * and the footer menu (up to three columns of links). Stored in the site_content row "menus"
- * (live content plus draft). Until that row has content, the menus are built from DEFAULT
- * links that reproduce the site as it was before menus were editable.
+ * (live content plus draft). Until that row has content, the menus are built from DEFAULT links.
  *
- * Links point at things rather than URLs (a page, an insight, a section of a page, an external
- * link, an email), so renaming or reordering doesn't break them. A link whose target has gone
- * (unpublished insight, deleted section) is hidden on the live site and flagged in the editor.
+ * Links point at things rather than URLs (a page, a section of a page, an external link, an
+ * email), so renaming or reordering doesn't break them. A link whose target has gone (unpublished
+ * page, deleted section) is hidden on the live site and flagged in the editor.
  */
 import { sectionOrder, type PageKey } from "./page-sections";
 import { findPage } from "./pages";
 
 export type LinkTarget =
   | { kind: "page"; page: PageKey }
-  | { kind: "insight"; id: string }
   | { kind: "section"; page: PageKey; section: string }
   | { kind: "url"; url: string }
   | { kind: "email"; email: string };
@@ -27,12 +25,7 @@ export const MAX_FOOTER_COLUMNS = 3;
 export const MAIN_MENU_SOFT_LIMIT = 5;
 
 /** Names for the built-in pages in the link editor (created pages use their own names). */
-export const PAGE_NAMES: Record<string, string> = {
-  home: "Homepage",
-  insights: "Insights",
-  investments: "Investments",
-  publications: "Publications",
-};
+export const PAGE_NAMES: Record<string, string> = { home: "Homepage" };
 
 /** Where a page link goes, or why it can't: created pages must exist and be published. */
 function pageHref(
@@ -47,65 +40,17 @@ function pageHref(
 
 export const LINK_KINDS: Array<{ kind: LinkTarget["kind"]; label: string }> = [
   { kind: "page", label: "Page" },
-  { kind: "insight", label: "Insight" },
   { kind: "section", label: "Section of a page" },
   { kind: "url", label: "External link" },
   { kind: "email", label: "Email" },
 ];
 
-/** The menus as they were hardcoded before they became editable (Substack and email come from Settings). */
-export function defaultMenus(
-  settings?: { substack_url?: string; contact_email?: string } | null,
-): Menus {
-  const substack = settings?.substack_url ?? "";
+/** The menus before they're first edited: Home in the main menu, a Contact column in the footer. */
+export function defaultMenus(settings?: { contact_email?: string } | null): Menus {
   const email = settings?.contact_email ?? "";
   return {
-    main: [
-      { id: "m-investments", label: "Investments", target: { kind: "page", page: "investments" } },
-      {
-        id: "m-publications",
-        label: "Publications",
-        target: { kind: "page", page: "publications" },
-      },
-      { id: "m-insights", label: "Insights", target: { kind: "page", page: "insights" } },
-      { id: "m-substack", label: "Substack", target: { kind: "url", url: substack }, button: true },
-    ],
+    main: [{ id: "m-home", label: "Home", target: { kind: "page", page: "home" } }],
     footer: [
-      {
-        id: "c-explore",
-        heading: "Explore",
-        links: [
-          {
-            id: "f-strategy",
-            label: "Strategy",
-            target: { kind: "section", page: "home", section: "pillars" },
-          },
-          {
-            id: "f-what",
-            label: "What we do",
-            target: { kind: "section", page: "home", section: "what" },
-          },
-          {
-            id: "f-founder",
-            label: "Biography",
-            target: { kind: "section", page: "home", section: "bio" },
-          },
-          { id: "f-insights", label: "Insights", target: { kind: "page", page: "insights" } },
-          {
-            id: "f-investments",
-            label: "Investments",
-            target: { kind: "page", page: "investments" },
-          },
-        ],
-      },
-      {
-        id: "c-connect",
-        heading: "Connect",
-        links: [
-          { id: "f-linkedin", label: "LinkedIn", target: { kind: "url", url: "" } },
-          { id: "f-substack", label: "Substack", target: { kind: "url", url: substack } },
-        ],
-      },
       {
         id: "c-contact",
         heading: "Contact",
@@ -122,10 +67,7 @@ const isMenus = (m: unknown): m is Menus =>
   Array.isArray((m as Menus).footer);
 
 /** Stored menus if they've been edited, otherwise the defaults. */
-export function resolveMenus(
-  stored: unknown,
-  settings?: { substack_url?: string; contact_email?: string } | null,
-): Menus {
+export function resolveMenus(stored: unknown, settings?: { contact_email?: string } | null): Menus {
   return isMenus(stored) ? stored : defaultMenus(settings);
 }
 
@@ -134,19 +76,17 @@ export const sectionAnchor = (id: string) => `section-${id}`;
 
 export type ResolvedLink = {
   href: string;
-  /** Internal page or insight: use the router. */
+  /** Internal page: use the router. */
   internal: boolean;
   /** Opens in a new tab with the external-link arrow. */
   external: boolean;
-  /** An external link with no address yet: shown as "coming soon", not clickable (e.g. LinkedIn). */
+  /** An external link with no address yet: shown as "coming soon", not clickable. */
   pending: boolean;
   /** Why the link can't work right now; hidden on the live site, flagged in the editor. */
   broken: string | null;
 };
 
 type Ctx = {
-  /** Published insights. */
-  posts: Array<{ id: string; slug: string }>;
   /** Site content keyed by page (to check a section is still on its page). */
   site: Record<string, unknown>;
 };
@@ -157,12 +97,6 @@ export function resolveLink(target: LinkTarget, ctx: Ctx): ResolvedLink {
     case "page": {
       const { path, broken } = pageHref(ctx.site, target.page);
       return { ...ok, href: path, internal: true, broken };
-    }
-    case "insight": {
-      const post = ctx.posts.find((p) => p.id === target.id);
-      return post
-        ? { ...ok, href: `/insights/${post.slug}`, internal: true }
-        : { ...ok, href: "", broken: "This insight isn't published (or was deleted)." };
     }
     case "section": {
       const doc = ctx.site[target.page] as Record<string, unknown> | undefined;
@@ -190,8 +124,6 @@ export function blankTarget(kind: LinkTarget["kind"]): LinkTarget {
   switch (kind) {
     case "page":
       return { kind, page: "home" };
-    case "insight":
-      return { kind, id: "" };
     case "section":
       return { kind, page: "home", section: "" };
     case "url":

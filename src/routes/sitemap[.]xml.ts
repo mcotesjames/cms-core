@@ -1,21 +1,21 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { getPublishedPosts, getSiteContent } from "@/data/content";
+import { getSiteContent } from "@/data/content";
 import { buildSitemap } from "@/lib/sitemap";
 
 /**
- * /sitemap.xml, built from the live content on every request: the built-in pages, published
- * created pages, and published insights — leaving out anything hidden from search engines.
+ * /sitemap.xml, built from the live content on every request: the built-in pages and published
+ * created pages, leaving out anything hidden from search engines.
  */
 export const Route = createFileRoute("/sitemap.xml")({
   server: {
     handlers: {
       GET: async () => {
         try {
-          const [site, posts] = await Promise.all([getSiteContent(), getPublishedPosts()]);
+          const site = await getSiteContent();
           const rows = Object.entries(site)
             .map(([key, content]) => ({ key, content }))
             .sort((a, b) => a.key.localeCompare(b.key));
-          return new Response(buildSitemap(rows, posts), {
+          return new Response(buildSitemap(rows), {
             headers: {
               "content-type": "application/xml; charset=utf-8",
               "cache-control": "public, max-age=3600",

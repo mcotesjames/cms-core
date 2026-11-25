@@ -2,23 +2,40 @@ import { describe, expect, it } from "vitest";
 import { normalizeSiteContent } from "@/lib/site-content-shape";
 
 describe("missing CMS rows", () => {
-  it("supplies empty settings and nested page fields", () => {
+  it("supplies empty settings and the homepage hero", () => {
     const result = normalizeSiteContent({});
-    expect(result["settings"]).toMatchObject({ substack_url: "", contact_email: "" });
-    expect(result["home"]).toMatchObject({ hero: { headline: "", cta_label: "" } });
+    expect(result["settings"]).toEqual({
+      contact_email: "",
+      footer_heading: "",
+      footer_tagline: "",
+    });
+    expect(result["home"]).toEqual({ intro: { title: "", summary: "" } });
   });
+
+  it("replaces non-text values in known fields with empty text", () => {
+    const result = normalizeSiteContent({
+      home: { intro: { title: 5, summary: null } },
+      settings: "broken",
+    });
+    expect(result["home"]).toEqual({ intro: { title: "", summary: "" } });
+    expect(result["settings"]).toMatchObject({ contact_email: "" });
+  });
+
   it("preserves saved content, drafts, section order and custom pages", () => {
     const site = {
       home: {
-        hero: { headline: "Saved headline" },
+        intro: { title: "Saved title" },
         sections: ["s1"],
-        draft: { text: "Unpublished" },
+        draft: { intro: { title: "Unpublished" } },
       },
-      page_demo: { template: "interactive" },
+      settings: { contact_email: "info@example.com", seo: { site_name: "Example" } },
+      page_demo: { template: "standard" },
     };
     const result = normalizeSiteContent(site);
     expect(result["home"]).toMatchObject(site.home);
+    expect(result["home"]).toMatchObject({ intro: { title: "Saved title", summary: "" } });
+    expect(result["settings"]).toMatchObject(site.settings);
     expect(result["page_demo"]).toBe(site.page_demo);
-    expect(site.home.hero).toEqual({ headline: "Saved headline" });
+    expect(site.home.intro).toEqual({ title: "Saved title" });
   });
 });

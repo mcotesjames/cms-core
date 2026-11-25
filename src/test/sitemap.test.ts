@@ -1,68 +1,45 @@
 import { describe, expect, it } from "vitest";
+import { SITE_URL } from "@/lib/seo";
 import { buildSitemap } from "@/lib/sitemap";
 
+const pagesRow = {
+  key: "pages",
+  content: {
+    list: [
+      { key: "page_about", title: "About", slug: "about", published: true },
+      { key: "page_draft", title: "Draft", slug: "unpublished", published: false },
+    ],
+  },
+};
+
 describe("sitemap", () => {
-  it("includes all four built-in pages and published created pages", () => {
-    const body = buildSitemap(
-      [
-        {
-          key: "pages",
-          content: {
-            list: [
-              {
-                key: "page_minerals",
-                title: "Minerals",
-                slug: "critical-minerals-standoff",
-                published: true,
-              },
-              { key: "page_draft", title: "Draft", slug: "unpublished", published: false },
-            ],
-          },
-        },
-      ],
-      [],
-    );
-    for (const path of [
-      "/",
-      "/insights",
-      "/investments",
-      "/publications",
-      "/critical-minerals-standoff",
-    ]) {
-      expect(body).toContain(`<loc>https://mcotesjames.com${path}</loc>`);
-    }
-    expect(body).not.toContain("/unpublished");
+  it("is a valid urlset that always holds the homepage", () => {
+    const body = buildSitemap([]);
+    expect(body.startsWith('<?xml version="1.0" encoding="UTF-8"?>\n<urlset')).toBe(true);
+    expect(body).toContain(`<url><loc>${SITE_URL}/</loc></url>`);
+    expect(body.trimEnd().endsWith("</urlset>")).toBe(true);
   });
 
-  it("includes every published insight, not drafts or noindex entries", () => {
-    const body = buildSitemap(
-      [],
-      [
-        { slug: "visible", published: true, published_at: "2026-10-23T00:00:00Z", seo: null },
-        { slug: "draft", published: false, published_at: null, seo: null },
-        { slug: "hidden", published: true, published_at: null, seo: { noindex: true } },
-      ],
-    );
-    expect(body).toContain(
-      "<loc>https://mcotesjames.com/insights/visible</loc><lastmod>2026-10-23</lastmod>",
-    );
-    expect(body).not.toContain("/insights/draft");
-    expect(body).not.toContain("/insights/hidden");
+  it("includes published created pages and leaves unpublished ones out", () => {
+    const body = buildSitemap([pagesRow]);
+    expect(body).toContain(`<loc>${SITE_URL}/about</loc>`);
+    expect(body).not.toContain("/unpublished");
+    expect(body.match(/<url>/g)).toHaveLength(2);
   });
 
   it("excludes pages hidden from search", () => {
-    expect(
-      buildSitemap([{ key: "investments", content: { seo: { noindex: true } } }], []),
-    ).not.toContain("<loc>https://mcotesjames.com/investments</loc>");
+    const body = buildSitemap([
+      pagesRow,
+      { key: "page_about", content: { seo: { noindex: true } } },
+      { key: "home", content: { seo: { noindex: true } } },
+    ]);
+    expect(body).not.toContain("<loc>");
+    expect(buildSitemap([{ key: "home", content: { seo: { noindex: "yes" } } }])).toContain(
+      `<loc>${SITE_URL}/</loc>`,
+    );
   });
 
-  it("omits page lastmod because a draft save is not a live page change", () => {
-    expect(buildSitemap([{ key: "home", content: {} }], [])).not.toContain("<lastmod>");
-  });
-
-  it("escapes XML characters in content addresses", () => {
-    expect(
-      buildSitemap([], [{ slug: "a&b", published: true, published_at: null, seo: null }]),
-    ).toContain("/insights/a&amp;b</loc>");
+  it("omits lastmod because a draft save is not a live page change", () => {
+    expect(buildSitemap([pagesRow, { key: "home", content: {} }])).not.toContain("<lastmod>");
   });
 });

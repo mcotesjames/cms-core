@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { fetchSiteRows } from "@/lib/admin-drafts";
-import { listStudioPosts } from "@/data/entries";
 import { useNavigate } from "@tanstack/react-router";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -15,26 +14,15 @@ import {
   matches,
   switcherFlags,
   type Flags,
-  type SwitcherPost,
   type SwitcherTarget,
 } from "@/lib/page-switcher";
 
-/** Which pages have drafts, and the insights with their status. Refreshed when the switcher opens. */
+/** Which rows have drafts. Refreshed when the switcher opens. */
 const switcherQuery = queryOptions({
   queryKey: ["admin", "switcher"],
-  queryFn: async () => {
-    const [rows, posts] = await Promise.all([fetchSiteRows(), listStudioPosts()]);
-    return {
-      drafts: rows.filter((r) => r.draft != null).map((r) => r.key),
-      posts: posts.map((r) => ({
-        id: r.id,
-        title: r.title,
-        published: r.published,
-        published_at: r.published_at,
-        hasDraft: r.draft != null,
-      })) as SwitcherPost[],
-    };
-  },
+  queryFn: async () => ({
+    drafts: (await fetchSiteRows()).filter((r) => r.draft != null).map((r) => r.key),
+  }),
 });
 
 function Dots({ f }: { f: Flags | undefined }) {
@@ -59,7 +47,7 @@ const ROW =
   "flex w-full items-center rounded-sm px-3 py-2 text-left text-sm hover:bg-accent focus-visible:bg-accent focus-visible:outline-none";
 
 /**
- * The page name in the editor's top bar, as a dropdown to jump to another page or insight.
+ * The page name in the editor's top bar, as a dropdown to jump to another page.
  * Waits for any pending draft save before switching, and keeps the device view and comment mode.
  */
 export function PageSwitcher({
@@ -75,7 +63,6 @@ export function PageSwitcher({
 }) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const [articles, setArticles] = useState(false);
   const [q, setQ] = useState("");
   const [waiting, setWaiting] = useState(false);
   const savingRef = useRef(saving);
@@ -87,7 +74,6 @@ export function PageSwitcher({
   const [creating, setCreating] = useState(false);
   const flags = switcherFlags({
     drafts: data?.drafts ?? [],
-    posts: data?.posts ?? [],
     openCommentPlaces: comments.filter(isOpen).map((t) => t.opened_on),
     pages: pageList,
   });
@@ -96,7 +82,6 @@ export function PageSwitcher({
   useEffect(() => {
     const show = () => {
       setOpen(true);
-      setArticles(false);
       setQ("");
     };
     const onKey = (e: KeyboardEvent) => {
@@ -121,8 +106,8 @@ export function PageSwitcher({
     };
   }, []);
 
-  const go = async (target: SwitcherTarget | "insights-list") => {
-    if (target !== "insights-list" && isSame(target, current)) {
+  const go = async (target: SwitcherTarget) => {
+    if (isSame(target, current)) {
       setOpen(false);
       return;
     }
@@ -138,16 +123,11 @@ export function PageSwitcher({
       device: view.device === "desktop" ? undefined : view.device,
       mode: view.commenting ? ("comment" as const) : undefined,
     };
-    if (target === "insights-list") void navigate({ to: "/admin" });
-    else if (target.kind === "page")
-      void navigate({ to: "/admin/pages/$key", params: { key: target.key }, search });
-    else void navigate({ to: "/admin/insights/$id", params: { id: target.id }, search });
+    void navigate({ to: "/admin/pages/$key", params: { key: target.key }, search });
   };
 
-  const posts = data?.posts ?? [];
   const typing = q.trim().length > 0;
   const pageHits = pageList.filter((p) => matches(p.title, q));
-  const postHits = posts.filter((p) => matches(p.title || "Untitled", q));
   const here = (t: SwitcherTarget) => isSame(t, current);
 
   const PageRow = ({ k, title, draft }: { k: PageKey; title: string; draft?: boolean }) => (
@@ -163,20 +143,6 @@ export function PageSwitcher({
       <Dots f={flags.pages[k]} />
     </button>
   );
-  const PostRow = ({ p }: { p: SwitcherPost }) => (
-    <button
-      type="button"
-      className={ROW}
-      aria-current={here({ kind: "post", id: p.id }) ? "page" : undefined}
-      onClick={() => go({ kind: "post", id: p.id })}
-    >
-      <span className="w-4 shrink-0 text-xs">{here({ kind: "post", id: p.id }) ? "✓" : ""}</span>
-      <span className="min-w-0 truncate">{p.title || "Untitled"}</span>
-      {!p.published && <span className="ml-2 shrink-0 text-xs text-muted-foreground">Draft</span>}
-      <Dots f={flags.posts[p.id]} />
-    </button>
-  );
-
   return (
     <>
       <NewPageDialog open={creating} onOpenChange={setCreating} />
@@ -184,10 +150,7 @@ export function PageSwitcher({
         open={open}
         onOpenChange={(o) => {
           setOpen(o);
-          if (o) {
-            setArticles(false);
-            setQ("");
-          }
+          if (o) setQ("");
         }}
       >
         <PopoverTrigger
@@ -211,57 +174,23 @@ export function PageSwitcher({
             ref={search}
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder={articles ? "Search insights…" : "Search pages and insights…"}
-            aria-label="Search pages and insights"
+            placeholder="Search pages…"
+            aria-label="Search pages"
             className="mb-2 h-9"
             onKeyDown={(e) => {
-              if (e.key !== "Enter") return;
-              const first = articles
-                ? postHits[0]
-                : pageHits[0]
-                  ? { page: pageHits[0] }
-                  : postHits[0];
-              if (!first) return;
-              if ("page" in first) go({ kind: "page", key: first.page.key });
-              else go({ kind: "post", id: first.id });
+              if (e.key === "Enter" && pageHits[0]) go({ kind: "page", key: pageHits[0].key });
             }}
           />
           <div className="max-h-[60vh] overflow-y-auto">
             {waiting && (
               <p className="px-3 py-2 text-xs text-muted-foreground">Saving your draft…</p>
             )}
-            {articles ? (
-              <>
-                <button
-                  type="button"
-                  className={`${ROW} text-muted-foreground`}
-                  onClick={() => {
-                    setArticles(false);
-                    setQ("");
-                  }}
-                >
-                  ‹ Content
-                </button>
-                <p className="px-3 pb-1 pt-2 text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                  Insights
-                </p>
-                {!data && <p className="px-3 py-2 text-xs text-muted-foreground">Loading…</p>}
-                {data && postHits.length === 0 && (
-                  <p className="px-3 py-2 text-xs text-muted-foreground">No insights match.</p>
-                )}
-                {postHits.map((p) => (
-                  <PostRow key={p.id} p={p} />
-                ))}
-              </>
-            ) : typing ? (
+            {typing ? (
               <>
                 {pageHits.map((p) => (
                   <PageRow key={p.key} k={p.key} title={p.title} draft={!p.published} />
                 ))}
-                {postHits.map((p) => (
-                  <PostRow key={p.id} p={p} />
-                ))}
-                {pageHits.length + postHits.length === 0 && (
+                {pageHits.length === 0 && (
                   <p className="px-3 py-2 text-xs text-muted-foreground">Nothing matches.</p>
                 )}
               </>
@@ -283,28 +212,6 @@ export function PageSwitcher({
                 >
                   <span className="w-4" />+ New page
                 </button>
-                <p className="px-3 pb-1 pt-3 text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                  Content
-                </p>
-                <div className="flex items-center">
-                  <button type="button" className={ROW} onClick={() => go("insights-list")}>
-                    <span className="w-4" />
-                    Insights
-                    <Dots f={flags.insights} />
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded-sm px-3 py-2 text-sm hover:bg-accent"
-                    aria-label="Show insights"
-                    onClick={() => {
-                      setArticles(true);
-                      setQ("");
-                      search.current?.focus();
-                    }}
-                  >
-                    ›
-                  </button>
-                </div>
               </>
             )}
           </div>

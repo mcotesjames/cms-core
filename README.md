@@ -7,7 +7,7 @@ An editorial, canvas-first CMS: editors change pages, entries and records direct
 
 ## Status
 
-Phase 1 of the roadmap (data layer on Cloudflare D1 + R2). The site and Studio run locally on a local D1 database and R2 bucket, seeded with fixture content. Sign-in is a dev-only placeholder until Better Auth (Phase 3): in `npm run dev` you pick a seeded account at `/admin`.
+The site and Studio run locally on a local D1 database and R2 bucket (roadmap Phase 1). The public site is a plain skeleton: a homepage built from a hero and Text and Image sections, with more pages created in the Studio. Sign-in is a dev-only placeholder until Better Auth (Phase 3): in `npm run dev` you pick a seeded account at `/admin`.
 
 ## Development
 

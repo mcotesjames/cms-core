@@ -1,6 +1,5 @@
 import { SITE_NAME } from "@/lib/seo";
 import { siteContentQuery } from "@/lib/site-content";
-import { postsQuery } from "@/lib/content";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
@@ -11,13 +10,10 @@ import {
   Scripts,
   type ErrorComponentProps,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
-import { PageTransition } from "@/components/PageTransition";
-import { PageBackground } from "@/components/PageBackground";
 import { StudioBridge } from "@/components/StudioBridge";
 
 function NotFoundComponent() {
@@ -45,9 +41,6 @@ function NotFoundComponent() {
 function ErrorComponent({ error, reset }: ErrorComponentProps) {
   console.error(error);
   const router = useRouter();
-  useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
-  }, [error]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -105,12 +98,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
     ],
   }),
-  // Insights are loaded with the site content so menu links to insights resolve on first render.
-  loader: ({ context }) =>
-    Promise.all([
-      context.queryClient.ensureQueryData(siteContentQuery),
-      context.queryClient.ensureQueryData(postsQuery),
-    ]).then(([site]) => site),
+  // Site content is loaded once here: every page, menu and the footer read it.
+  loader: ({ context }) => context.queryClient.ensureQueryData(siteContentQuery),
   shellComponent: RootShell,
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
@@ -137,10 +126,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      {/* Mounted once so the WebGL background survives route changes. */}
-      <PageBackground />
       <Outlet />
-      <PageTransition />
       <StudioBridge />
       <Toaster />
     </QueryClientProvider>

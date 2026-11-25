@@ -5,10 +5,10 @@
  * Feedback list can open it in place.
  *
  * Anchors use the canvas's own addresses:
- *   "home:intro.text" (text field)   "home:pillars" (section)   "pillars:<id>" (list item)
- *   "menu:<id>" / "menucol:<id>"      "record:investments:<id>"  "post:<id>"   "page:home"
- * Records, insights, menus and the footer appear on several pages, so their threads are pinned
- * wherever they appear; anything else only where the thread was left.
+ *   "home:intro.title" (text field)   "home:s1ab" (section)   "menu:<id>" / "menucol:<id>"
+ *   "settings:footer_tagline"          "page:home" (the page as a whole)
+ * Menus and the footer appear on every page, so their threads are pinned wherever they appear;
+ * anything else only where the thread was left (`opened_on` = "page:<key>").
  */
 import type { CommentRow } from "@/data/comments";
 import type { PageKey } from "./page-sections";
@@ -24,7 +24,6 @@ export type Profile = {
 };
 export type Device = "desktop" | "tablet" | "mobile";
 export type Thread = CommentRow & { replies: CommentRow[] };
-export type RecordTable = "investments" | "publications";
 
 export const DEVICES: Device[] = ["desktop", "tablet", "mobile"];
 
@@ -44,13 +43,9 @@ export function groupThreads(rows: CommentRow[]): Thread[] {
 
 export const isOpen = (t: Pick<CommentRow, "resolved_at">) => !t.resolved_at;
 
-/** Things that appear on more than one page (records, insight cards, menus, footer). */
+/** Things that appear on every page (menus, footer). */
 export function isSharedAnchor(anchor: string): boolean {
-  return (
-    /^record:/.test(anchor) ||
-    /^post:[0-9a-f-]{36}$/.test(anchor) ||
-    /^(menu|menucol|menus|settings):/.test(anchor)
-  );
+  return /^(menu|menucol|menus|settings):/.test(anchor);
 }
 
 /**
@@ -71,9 +66,7 @@ export function canvasThreads(threads: Thread[], here: string, found: Record<str
     }));
 }
 
-export const recordAnchor = (table: RecordTable, id: string) => `record:${table}:${id}`;
 export const pageAnchor = (key: PageKey) => `page:${key}`;
-export const postAnchor = (id: string) => `post:${id}`;
 
 /** Display name: first and last name, falling back to the email. */
 export function profileName(
@@ -84,24 +77,14 @@ export function profileName(
   return name || p.email || "Someone";
 }
 
-const PAGE_NAMES: Record<string, string> = {
-  home: "Homepage",
-  insights: "Insights page",
-  investments: "Investments page",
-  publications: "Publications page",
-};
+const PAGE_NAMES: Record<string, string> = { home: "Homepage" };
 
-export type Place =
-  | { kind: "page"; key: PageKey; label: string }
-  | { kind: "post"; id: string; label: string }
-  | { kind: "record"; table: RecordTable; id: string; label: string };
+export type Place = { kind: "page"; key: PageKey; label: string };
 
 /** Where a thread was left, as something the Feedback list can name and link to. */
 export function parsePlace(
   openedOn: string,
   names: {
-    posts?: Record<string, string>;
-    records?: Record<string, string>;
     /** Created pages' names, by key. */
     pages?: Record<string, string>;
   } = {},
@@ -115,21 +98,6 @@ export function parsePlace(
       label: PAGE_NAMES[key] ?? names.pages?.[key] ?? "A page that was deleted",
     };
   }
-  const post = openedOn.match(/^post:(.+)$/);
-  if (post)
-    return {
-      kind: "post",
-      id: post[1]!,
-      label: `Insight: ${names.posts?.[post[1]!] ?? "untitled"}`,
-    };
-  const rec = openedOn.match(/^record:(investments|publications):(.+)$/);
-  if (rec)
-    return {
-      kind: "record",
-      table: rec[1] as RecordTable,
-      id: rec[2]!,
-      label: `${rec[1] === "investments" ? "Investment" : "Publication"}: ${names.records?.[rec[2]!] ?? "untitled"}`,
-    };
   return null;
 }
 
@@ -148,10 +116,9 @@ export function daysUntilRemoved(resolvedAt: string, now = Date.now()): number {
   return Math.max(0, 30 - Math.floor((now - new Date(resolvedAt).getTime()) / 86400000));
 }
 
-/** Search params that open a thread in place: `?comment=<id>` (and `&record=<id>` on record lists). */
+/** Search params that open a thread in place: `?comment=<id>`. */
 export function commentSearch(s: Record<string, unknown>): {
   comment?: string | undefined;
-  record?: string | undefined;
   /** Carried over by the page switcher: the device view and comment mode. */
   device?: "tablet" | "mobile" | undefined;
   mode?: "comment" | undefined;
@@ -160,7 +127,6 @@ export function commentSearch(s: Record<string, unknown>): {
   const device = s["device"] === "tablet" || s["device"] === "mobile" ? s["device"] : undefined;
   return {
     comment: str(s["comment"]),
-    record: str(s["record"]),
     device,
     mode: s["mode"] === "comment" ? "comment" : undefined,
   };
