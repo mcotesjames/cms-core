@@ -27,7 +27,7 @@ npm run user:collaborator -- you@example.com [--remote]  # hand the collaborator
 
 Local sign-in needs a `.dev.vars` file (gitignored) with `BETTER_AUTH_SECRET=<random>` and `COLLABORATOR_EMAIL=<your email>` (the first sign-up with that email gets full access automatically). Create the secret with `printf 'BETTER_AUTH_SECRET=%s\n' "$(openssl rand -base64 32)" >> .dev.vars`.
 
-Deploying staging (needs `npx wrangler login` once):
+Staging deploys itself: every push to `main` that passes the checks applies staging's migrations and deploys the Worker (GitHub Actions, `.github/workflows/ci.yml`; the Actions tab shows each run, and **Run workflow** redeploys by hand). Fallback from a laptop only if GitHub is unavailable (needs `npx wrangler login` once):
 
 ```sh
 npx wrangler d1 migrations apply DB --remote          # when there are new migrations
