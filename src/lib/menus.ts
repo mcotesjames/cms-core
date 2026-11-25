@@ -1,0 +1,263 @@
+/**
+ * Site menus edited in the Content Studio: the main menu (header pill, also the mobile menu)
+ * and the footer menu (up to three columns of links). Stored in the site_content row "menus"
+ * (live content plus draft). Until that row has content, the menus are built from DEFAULT
+ * links that reproduce the site as it was before menus were editable.
+ *
+ * Links point at things rather than URLs (a page, an insight, a section of a page, an external
+ * link, an email), so renaming or reordering doesn't break them. A link whose target has gone
+ * (unpublished insight, deleted section) is hidden on the live site and flagged in the editor.
+ */
+import { sectionOrder, type PageKey } from "./page-sections";
+import { findPage } from "./pages";
+
+export type LinkTarget =
+  | { kind: "page"; page: PageKey }
+  | { kind: "insight"; id: string }
+  | { kind: "section"; page: PageKey; section: string }
+  | { kind: "url"; url: string }
+  | { kind: "email"; email: string };
+
+export type MenuLink = { id: string; label: string; target: LinkTarget; button?: boolean };
+export type FooterColumn = { id: string; heading: string; links: MenuLink[] };
+export type Menus = { main: MenuLink[]; footer: FooterColumn[] };
+
+export const MAX_FOOTER_COLUMNS = 3;
+/** Above this many ordinary links the main menu pill may not fit on smaller screens. */
+export const MAIN_MENU_SOFT_LIMIT = 5;
+
+/** Names for the built-in pages in the link editor (created pages use their own names). */
+export const PAGE_NAMES: Record<string, string> = {
+  home: "Homepage",
+  insights: "Insights",
+  investments: "Investments",
+  publications: "Publications",
+};
+
+/** Where a page link goes, or why it can't: created pages must exist and be published. */
+function pageHref(
+  site: Record<string, unknown>,
+  key: string,
+): { path: string; broken: string | null } {
+  const page = findPage(site, key);
+  if (!page) return { path: "", broken: "That page no longer exists." };
+  if (!page.published) return { path: page.path, broken: "That page isn't published yet." };
+  return { path: page.path, broken: null };
+}
+
+export const LINK_KINDS: Array<{ kind: LinkTarget["kind"]; label: string }> = [
+  { kind: "page", label: "Page" },
+  { kind: "insight", label: "Insight" },
+  { kind: "section", label: "Section of a page" },
+  { kind: "url", label: "External link" },
+  { kind: "email", label: "Email" },
+];
+
+/** The menus as they were hardcoded before they became editable (Substack and email come from Settings). */
+export function defaultMenus(
+  settings?: { substack_url?: string; contact_email?: string } | null,
+): Menus {
+  const substack = settings?.substack_url ?? "";
+  const email = settings?.contact_email ?? "";
+  return {
+    main: [
+      { id: "m-investments", label: "Investments", target: { kind: "page", page: "investments" } },
+      {
+        id: "m-publications",
+        label: "Publications",
+        target: { kind: "page", page: "publications" },
+      },
+      { id: "m-insights", label: "Insights", target: { kind: "page", page: "insights" } },
+      { id: "m-substack", label: "Substack", target: { kind: "url", url: substack }, button: true },
+    ],
+    footer: [
+      {
+        id: "c-explore",
+        heading: "Explore",
+        links: [
+          {
+            id: "f-strategy",
+            label: "Strategy",
+            target: { kind: "section", page: "home", section: "pillars" },
+          },
+          {
+            id: "f-what",
+            label: "What we do",
+            target: { kind: "section", page: "home", section: "what" },
+          },
+          {
+            id: "f-founder",
+            label: "Biography",
+            target: { kind: "section", page: "home", section: "bio" },
+          },
+          { id: "f-insights", label: "Insights", target: { kind: "page", page: "insights" } },
+          {
+            id: "f-investments",
+            label: "Investments",
+            target: { kind: "page", page: "investments" },
+          },
+        ],
+      },
+      {
+        id: "c-connect",
+        heading: "Connect",
+        links: [
+          { id: "f-linkedin", label: "LinkedIn", target: { kind: "url", url: "" } },
+          { id: "f-substack", label: "Substack", target: { kind: "url", url: substack } },
+        ],
+      },
+      {
+        id: "c-contact",
+        heading: "Contact",
+        links: [{ id: "f-email", label: email, target: { kind: "email", email } }],
+      },
+    ],
+  };
+}
+
+const isMenus = (m: unknown): m is Menus =>
+  !!m &&
+  typeof m === "object" &&
+  Array.isArray((m as Menus).main) &&
+  Array.isArray((m as Menus).footer);
+
+/** Stored menus if they've been edited, otherwise the defaults. */
+export function resolveMenus(
+  stored: unknown,
+  settings?: { substack_url?: string; contact_email?: string } | null,
+): Menus {
+  return isMenus(stored) ? stored : defaultMenus(settings);
+}
+
+/** The anchor id each page section gets, so section links survive reordering. */
+export const sectionAnchor = (id: string) => `section-${id}`;
+
+export type ResolvedLink = {
+  href: string;
+  /** Internal page or insight: use the router. */
+  internal: boolean;
+  /** Opens in a new tab with the external-link arrow. */
+  external: boolean;
+  /** An external link with no address yet: shown as "coming soon", not clickable (e.g. LinkedIn). */
+  pending: boolean;
+  /** Why the link can't work right now; hidden on the live site, flagged in the editor. */
+  broken: string | null;
+};
+
+type Ctx = {
+  /** Published insights. */
+  posts: Array<{ id: string; slug: string }>;
+  /** Site content keyed by page (to check a section is still on its page). */
+  site: Record<string, unknown>;
+};
+
+export function resolveLink(target: LinkTarget, ctx: Ctx): ResolvedLink {
+  const ok = { internal: false, external: false, pending: false, broken: null };
+  switch (target.kind) {
+    case "page": {
+      const { path, broken } = pageHref(ctx.site, target.page);
+      return { ...ok, href: path, internal: true, broken };
+    }
+    case "insight": {
+      const post = ctx.posts.find((p) => p.id === target.id);
+      return post
+        ? { ...ok, href: `/insights/${post.slug}`, internal: true }
+        : { ...ok, href: "", broken: "This insight isn't published (or was deleted)." };
+    }
+    case "section": {
+      const doc = ctx.site[target.page] as Record<string, unknown> | undefined;
+      const onPage = sectionOrder(target.page, doc).includes(target.section);
+      const page = pageHref(ctx.site, target.page);
+      const href = `${page.path || "/"}#${sectionAnchor(target.section)}`;
+      if (page.broken) return { ...ok, href, broken: page.broken };
+      return onPage
+        ? { ...ok, href }
+        : { ...ok, href, broken: "That section is no longer on the page." };
+    }
+    case "url":
+      return target.url.trim()
+        ? { ...ok, href: target.url.trim(), external: true }
+        : { ...ok, href: "", external: true, pending: true };
+    case "email":
+      return target.email.trim()
+        ? { ...ok, href: `mailto:${target.email.trim()}` }
+        : { ...ok, href: "", broken: "Add an email address." };
+  }
+}
+
+/** A sensible empty target when the author switches a link to another kind. */
+export function blankTarget(kind: LinkTarget["kind"]): LinkTarget {
+  switch (kind) {
+    case "page":
+      return { kind, page: "home" };
+    case "insight":
+      return { kind, id: "" };
+    case "section":
+      return { kind, page: "home", section: "" };
+    case "url":
+      return { kind, url: "" };
+    case "email":
+      return { kind, email: "" };
+  }
+}
+
+export const newLink = (id: string): MenuLink => ({
+  id,
+  label: "New link",
+  target: { kind: "page", page: "home" },
+});
+export const newColumn = (id: string): FooterColumn => ({ id, heading: "New column", links: [] });
+
+/** Adds a footer column, or returns null at the column limit. */
+export function addColumn(menus: Menus, id: string): Menus | null {
+  if (menus.footer.length >= MAX_FOOTER_COLUMNS) return null;
+  return { ...menus, footer: [...menus.footer, newColumn(id)] };
+}
+
+/** Marks one main-menu link as the button (only one can be), or clears it. */
+export function setButton(links: MenuLink[], id: string, on: boolean): MenuLink[] {
+  return links.map((l) => (l.id === id ? { ...l, button: on } : on ? { ...l, button: false } : l));
+}
+
+export function move<T extends { id: string }>(arr: T[], id: string, dir: -1 | 1): T[] | null {
+  const i = arr.findIndex((x) => x.id === id);
+  const j = i + dir;
+  if (i < 0 || j < 0 || j >= arr.length) return null;
+  const next = [...arr];
+  [next[i], next[j]] = [next[j]!, next[i]!];
+  return next;
+}
+
+/** Item addresses used between the editor and the canvas. */
+export const linkAddress = (id: string) => `menu:${id}`;
+export const columnAddress = (id: string) => `menucol:${id}`;
+export function parseMenuItem(
+  address: string | null | undefined,
+): { kind: "link" | "column"; id: string } | null {
+  const m = address?.match(/^(menu|menucol):(.+)$/);
+  return m ? { kind: m[1] === "menu" ? "link" : "column", id: m[2]! } : null;
+}
+
+/** Finds a link anywhere in the menus, with the footer column it sits in (if any). */
+export function findLink(
+  menus: Menus,
+  id: string,
+): { link: MenuLink; column: FooterColumn | null } | null {
+  const main = menus.main.find((l) => l.id === id);
+  if (main) return { link: main, column: null };
+  for (const c of menus.footer) {
+    const l = c.links.find((x) => x.id === id);
+    if (l) return { link: l, column: c };
+  }
+  return null;
+}
+
+/** Replaces one link wherever it is. */
+export function updateLink(menus: Menus, id: string, fn: (l: MenuLink) => MenuLink | null): Menus {
+  const apply = (links: MenuLink[]) =>
+    links.flatMap((l) => (l.id === id ? (fn(l) ? [fn(l)!] : []) : [l]));
+  return {
+    main: apply(menus.main),
+    footer: menus.footer.map((c) => ({ ...c, links: apply(c.links) })),
+  };
+}
