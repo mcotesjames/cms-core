@@ -609,6 +609,25 @@ Reverting code never restores the database, so every data change must be safe th
 3. **Roll out per site:** merge the tag from the `platform` remote (only platform files change, so conflicts are rare), run the site's checks, back up and migrate staging, check staging, then production.
 4. **Know who's behind:** each site records its platform version (`PLATFORM_VERSION`), so outdated sites are visible.
 
+### Compatibility contract
+A platform update is safe for every site only if it never breaks what sites build on. Modelled on how WordPress updates millions of sites: core is replaced wholesale, sites customise only through stable hooks, nothing is removed without years of warning, and database upgrades only add.
+
+**What sites build on (the contract):**
+- **`defineSite()`**: the config shape, section props (`{ values, cms }`), template shape, routes (section 9).
+- **The public markup's hooks:** the `.site-*` class names the platform renders (header, nav, footer, hero, Text, Image) and the design tokens (`--background`, `--foreground`, `--primary`, `--page-gutter`, `--measure`, `--wide`, `--type-*`, `--weight-*`, `--font-*`). A site's `theme.css` styles these, and CSS failures are silent (no type check catches them), so renaming or removing one is a **breaking change**, exactly like a config change.
+- **The content model:** field names in `section_data`, page row keys, menu link shapes. Content saved under them must keep showing.
+
+**Rules:**
+- **Never edit platform files in a site repo** (WordPress: never edit core). Site changes go in `src/site/`; anything else goes into the platform for every site. Enforced by the Phase 8 client-repo CI guard.
+- **Add, don't change.** New config options are optional with a default; new classes and tokens are added beside old ones. Existing sites keep building unchanged.
+- **Deprecate before removing.** A deprecated option, class or token keeps working and logs a warning in development (and in the build) for at least one minor release; it's removed only in a major version (`v2.0.0`) with upgrade notes. `defineSite()` then fails the site's build with a message saying what to change, never the live site.
+- **Migrations expand, then contract.** A migration runs seconds before the new Worker goes live, so the old code briefly runs against the new schema: a release may only *add* tables and columns (and copy data into them). Renames and removals happen in a later release, once no deployed code reads the old shape, and follow content safety (section 11).
+- **Field renames move the content:** renaming a section field, page key or menu shape ships with a migration that copies the values, never by changing the code alone.
+- **Each site tests its own build against the update.** The platform's CI only proves the fixture site; merging a release into a site repo runs that site's checks, then its staging is looked at before production. Layout regressions are caught by eye on staging until screenshot comparisons exist (Phase 8).
+- **A failure stays local.** One broken site section should hide itself (in the Studio: an error card) rather than take down the page (WordPress recovery mode) — Phase 8. Code rolls back instantly (Cloudflare keeps previous Worker versions); content only through D1 Time Travel, which also rewinds every edit since, so data changes must be right the first time.
+
+**Pace:** unlike WordPress, which updates sites it can't see, each MCJames site is updated deliberately: merge, its own CI, its own staging, then production. Fewer sites, each one checked.
+
 ### Rules for every change
 - Follow `AGENTS.md` (project-wide and per folder).
 - **Content safety** (section 11) for anything touching data.
@@ -722,6 +741,12 @@ Builds the core decided in Phase 5, each through the platform extension points s
 - ☐ `npm run platform:update -- <tag>`: merges the platform tag, then restores the site's own `src/site/` and `migrations/site/` (`git restore --source=HEAD --staged --worktree`), so the platform repo's fixture site never overwrites a client's site.
 - ☐ Client-repo CI guard: fails any change outside `src/site/` and `migrations/site/` unless it's a platform merge; each site records its `PLATFORM_VERSION`.
 - ☐ Section field renames are content changes: a backup and a script that copies values to the new field names (removed sections and templates already fall back safely).
+- ☐ Deprecation warnings: `defineSite()` and a stylesheet check warn when a site uses a deprecated option, `.site-*` class or token (section 12 → Compatibility contract).
+- ☐ Section error boundary: a site section that throws hides itself on the live site and shows an error card in the Studio, instead of breaking the page.
+- ☐ Screenshot comparisons on staging after a platform merge (key pages, desktop and mobile), so silent style breaks are seen before production.
+- ☐ Production deploys: from a tag or a manual run behind a GitHub `production` environment that needs MCJames's approval, with a database export before any migration.
+- ☐ Deploy tokens scoped per site (only that site's Worker, D1 and R2), never one token that can reach every client; depends on decision 8.
+- ☐ Once clients review on staging: changes reach `main` through pull requests (checks must pass) rather than direct pushes.
 - ☐ Content sync tools (section 2 → Environments and content flow): `content:launch` (staging → production, once; needed first in Phase 7) and `content:pull` (production → staging or local). Content and media only, never users, sessions or (by default) comments; always back up the target first.
 - ☐ Cron jobs: daily database backup to the MCJames backup bucket; resolved-comment clean-up.
 - ☐ Analytics dashboard in the Studio (if not in the Phase 5 core).
@@ -778,7 +803,7 @@ Still unchecked in the browser, for when entries return: replacing an image; add
 5. ~~Repo model~~ — decided (see Made).
 6. **Draft previews before publish:** the Studio canvas is the only preview. With Worker rendering, secret preview links are now cheap (render drafts for a signed token, never cached). Build them with the edge cache (Phase 1), or leave them for Phase 9?
 7. **Core scope:** which content types, record types, sections and Studio features ship with every site, which are on by default, and their default names and addresses. Candidates and criteria are in section 13 → Phase 5; the outcome moves to Made and is built in Phase 6.
-8. **Cloudflare account per client, or one for all?** One MCJames account is simplest (one bill, re-charged in the hosting fee; sites still isolated by their own Worker, D1 and R2) but every site shares the account's free allowances; one account per client gives each its own allowance and makes hand-over clean, at the cost of more admin. Either way, real client sites need **Workers Paid** (about $5/month per account): the free plan's ~10 ms CPU per request and 100,000 requests/day across the account won't carry server-rendered client sites. Decide before the Phase 8 new-site script.
+8. **Cloudflare account per client, or one for all?** One MCJames account is simplest (one bill, re-charged in the hosting fee; sites still isolated by their own Worker, D1 and R2) but every site shares the account's free allowances; one account per client gives each its own allowance and makes hand-over clean, at the cost of more admin. A deploy token for one account can reach every site in it, so a single account needs tokens scoped to each site's own resources (Phase 8). Either way, real client sites need **Workers Paid** (about $5/month per account): the free plan's ~10 ms CPU per request and 100,000 requests/day across the account won't carry server-rendered client sites. Decide before the Phase 8 new-site script.
 
 ---
 
@@ -811,6 +836,7 @@ Still unchecked in the browser, for when entries return: replacing an image; add
 - **Write standing rules down before building** (this file, `AGENTS.md`, or an AI builder's project knowledge).
 - **Ask for template proposals as a list before building.** It surfaces hard-coded text, placeholders and unused data early.
 - **Back up before the first migration, not after.**
+- **Treat CSS hooks as an API.** A site's theme styles the platform's class names and tokens; renaming one breaks every site silently, with every check still passing.
 - **Expect "built but not clicked through".** Keep an explicit untested list and check it.
 
 ### CMS design
@@ -873,6 +899,8 @@ Still unchecked in the browser, for when entries return: replacing an image; add
 ## 17. Change Log
 
 Newest first. Each entry: date, what changed, how, and any follow-ups.
+
+- **2026-11-25 · Compatibility contract · Claude** — Docs only. Section 12 gains a Compatibility contract (modelled on WordPress's core updates): what sites build on (`defineSite()`, the `.site-*` classes and design tokens, the content model's field names), and the rules for changing it — never edit platform files in a site repo, add rather than change, deprecate for at least a minor release before removing in a major, expand-then-contract migrations, field renames move content, each site tests its own build and staging, failures stay local. Phase 8 gains deprecation warnings, a section error boundary, staging screenshot comparisons, approved production deploys with a backup, per-site deploy tokens and pull requests once clients review on staging. Decision 8 notes token scope; a lesson on CSS hooks.
 
 - **2026-11-25 · Staging deploys from GitHub · Claude** — The CI workflow gains a `deploy-staging` job: on a push to `main` (or a manual run) whose checks pass, it notes the D1 Time Travel restore point, applies staging migrations and deploys the Worker built by the check job (passed on as an artifact, so what deploys is what was tested). Deploys queue rather than cancel; pull request runs never deploy. Cloudflare API token and account ID are GitHub repo secrets; Worker secrets stay on Cloudflare. Production deploys stay manual until Phase 7 (tag or button, approval required). Follow-up: the first run also brings Phase 4 to staging.
 
