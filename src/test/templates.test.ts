@@ -33,10 +33,10 @@ const aboutPage = {
 };
 
 describe("page templates", () => {
-  it("Standard is the only template and it shows the hero", () => {
-    expect(TEMPLATE_ORDER).toEqual(["standard"]);
-    expect(TEMPLATES.standard.hero).toBe(true);
-    expect(TEMPLATES.standard.required).toEqual([]);
+  it("Standard comes first and shows the hero; the site's templates follow", () => {
+    expect(TEMPLATE_ORDER).toEqual(["standard", "landing"]);
+    expect(TEMPLATES["standard"]!.hero).toBe(true);
+    expect(TEMPLATES["standard"]!.required).toEqual([]);
     expect(isTemplateKey("standard")).toBe(true);
     expect(isTemplateKey("interactive")).toBe(false);
     expect(isTemplateKey("toString")).toBe(false);
@@ -48,8 +48,8 @@ describe("page templates", () => {
     expect(templateOf("home", { template: "interactive" })).toBe("standard");
   });
 
-  it("Standard pages allow both section types", () => {
-    expect(availableTypes("page_abc", aboutPage)).toEqual(["text", "image"]);
+  it("Standard pages allow every section type, the site's included", () => {
+    expect(availableTypes("page_abc", aboutPage)).toEqual(["text", "image", "callout"]);
   });
 
   it("a new Standard page starts with its title, an empty summary and no sections", () => {

@@ -1,19 +1,24 @@
 /**
  * Flexible page sections. Every page is its pinned hero (title + intro, see PageView) followed by
  * an ordered list of sections that can be added, moved and deleted in the Content Studio. The
- * platform ships two section types, Text and Image; both can repeat.
+ * platform ships two section types, Text and Image (both repeat); a site adds its own designed
+ * sections in site.config.ts `sections` (spec section 12 → extension points).
  *
  * Storage, per page row in site_content:
  *   sections:     string[]                       — section ids in page order
  *   section_data: { [id]: { type, ...fields } }  — each section's own content
  */
 
+import type { ComponentType } from "react";
 import type { PageKey } from "./pages";
-import { TEMPLATES, templateOf } from "./templates";
+import type { SiteSectionProps } from "./site-config";
+import { site } from "./site";
+import { TEMPLATES, templateDef, templateOf, type TemplateKey } from "./templates";
 export type { PageKey } from "./pages";
 export { isPageKey } from "./pages";
 
-export type SectionType = "text" | "image";
+/** A section type key: a platform section ("text", "image") or one of the site's. */
+export type SectionType = string;
 
 export type SectionField = {
   name: string;
@@ -30,9 +35,13 @@ export type SectionDef = {
   repeatable: boolean;
   fields: SectionField[];
   defaults: Record<string, string>;
+  /** Templates whose pages may use it (default: every template that allows it). */
+  templates?: string[];
+  /** A site section's renderer (platform sections are rendered by PageSections itself). */
+  component?: ComponentType<SiteSectionProps>;
 };
 
-export const SECTION_TYPES: Record<SectionType, SectionDef> = {
+const PLATFORM_SECTIONS: Record<SectionType, SectionDef> = {
   text: {
     label: "Text",
     repeatable: true,
@@ -62,7 +71,25 @@ export const SECTION_TYPES: Record<SectionType, SectionDef> = {
   },
 };
 
+/** Every section type: the platform's, then the site's own (site.config.ts `sections`). */
+export const SECTION_TYPES: Record<SectionType, SectionDef> = {
+  ...PLATFORM_SECTIONS,
+  ...site.sections,
+};
+
 export const SECTION_ORDER = Object.keys(SECTION_TYPES) as SectionType[];
+
+/** A section type's definition (an unknown type, e.g. one a site no longer has, is an empty stub). */
+export function sectionDef(type: SectionType): SectionDef {
+  return SECTION_TYPES[type] ?? { label: type, repeatable: true, fields: [], defaults: {} };
+}
+
+/** Whether a page on this template may hold this section type. */
+export function allowedOn(template: TemplateKey, type: SectionType): boolean {
+  const def = sectionDef(type);
+  if (!def || !TEMPLATES[template]?.allowed(type)) return false;
+  return !def.templates || def.templates.includes(template);
+}
 
 /** A page row's content: free-form JSON edited in the Studio (same shape the draft helpers use). */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -102,7 +129,7 @@ export function resolveSection(
   if (!own || !(own.type in SECTION_TYPES)) return null;
   const type = own.type as SectionType;
   const fields = Object.fromEntries(
-    SECTION_TYPES[type].fields.map((f) => [f.name, `${page}:section_data.${id}.${f.name}`]),
+    sectionDef(type).fields.map((f) => [f.name, `${page}:section_data.${id}.${f.name}`]),
   );
   return { id, type, fields };
 }
@@ -112,10 +139,10 @@ export function resolveSection(
  * skipped (a guard against a page saved under another template).
  */
 export function resolveSections(page: PageKey, doc: Doc | null | undefined): SectionInstance[] {
-  const allowed = TEMPLATES[templateOf(page, doc)].allowed;
+  const template = templateOf(page, doc);
   return sectionOrder(page, doc)
     .map((id) => resolveSection(page, doc, id))
-    .filter((s): s is SectionInstance => s != null && allowed(s.type));
+    .filter((s): s is SectionInstance => s != null && allowedOn(template, s.type));
 }
 
 /**
@@ -123,16 +150,16 @@ export function resolveSections(page: PageKey, doc: Doc | null | undefined): Sec
  * repeatable, plus once-per-page ones not yet on it.
  */
 export function availableTypes(page: PageKey, doc: Doc | null | undefined): SectionType[] {
-  const allowed = TEMPLATES[templateOf(page, doc)].allowed;
+  const template = templateOf(page, doc);
   const present = new Set(resolveSections(page, doc).map((s) => s.type));
   return SECTION_ORDER.filter(
-    (t) => allowed(t) && (SECTION_TYPES[t].repeatable || !present.has(t)),
+    (t) => allowedOn(template, t) && (sectionDef(t).repeatable || !present.has(t)),
   );
 }
 
 /** True for the first section of each type the page's template requires: it can't be deleted. */
 export function isRequired(page: PageKey, doc: Doc | null | undefined, id: string): boolean {
-  const required = TEMPLATES[templateOf(page, doc)].required;
+  const required = templateDef(templateOf(page, doc)).required;
   const sections = resolveSections(page, doc);
   return required.some((type) => sections.find((s) => s.type === type)?.id === id);
 }
@@ -155,7 +182,7 @@ export function insertSection(
   const sections = [...order.slice(0, at), id, ...order.slice(at)];
   const section_data = {
     ...(doc["section_data"] ?? {}),
-    [id]: { type, ...SECTION_TYPES[type].defaults },
+    [id]: { type, ...sectionDef(type).defaults },
   };
   return { doc: { ...doc, sections, section_data }, id };
 }

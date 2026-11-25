@@ -1,8 +1,9 @@
 import { uploadMediaFile } from "@/data/media";
+import { site } from "./site";
 
-/** Browser-side image limits (spec section 2 → Media; site config later). */
-const MAX_DIMENSION = 2400;
-const QUALITY = 0.82;
+/** Browser-side image limits (spec section 2 → Media), from site.config.ts `media`. */
+const MAX_DIMENSION = site.media?.maxDimension ?? 2400;
+const QUALITY = site.media?.quality ?? 0.82;
 
 /** Images we resize: raster formats a canvas can re-encode without losing anything that matters. */
 const RESIZABLE = /^image\/(jpeg|png|webp)$/;

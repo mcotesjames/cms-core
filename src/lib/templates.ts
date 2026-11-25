@@ -5,16 +5,19 @@
  * comments, SEO, menus and canvas.
  *
  * Stored as `template` in a created page's site_content row; a missing value is Standard.
- * Built-in pages are always Standard. The platform ships Standard only; sites add their own
- * templates (spec section 6).
+ * Built-in pages are always Standard. The platform ships Standard; a site adds its own in
+ * site.config.ts `templates` (spec section 6).
  *
  * Switching template is a draft edit that replaces the page's sections with the new template's
  * starting sections and keeps everything else (hero, SEO, …). Discard undoes it until Publish.
  */
 import { SECTION_TYPES, type Doc, type SectionType } from "./page-sections";
 import { isFixedPage, type PageKey } from "./pages";
+import { site } from "./site";
+import { sectionDef } from "./page-sections";
 
-export type TemplateKey = "standard";
+/** A template key: "standard" or one of the site's own. */
+export type TemplateKey = string;
 
 export type TemplateDef = {
   label: string;
@@ -31,17 +34,35 @@ export type TemplateDef = {
   allowed: (t: SectionType) => boolean;
 };
 
+/** Standard first, then the site's own templates. */
 export const TEMPLATES: Record<TemplateKey, TemplateDef> = {
   standard: {
     label: "Standard",
-    description: "A hero, then text and image sections.",
+    description: "A hero, then any sections.",
     hero: true,
     required: [],
     allowed: () => true,
   },
+  ...Object.fromEntries(
+    Object.entries(site.templates ?? {}).map(([key, t]) => [
+      key,
+      {
+        label: t.label,
+        description: t.description,
+        hero: t.hero,
+        required: t.required,
+        allowed: (type: SectionType) => t.sections.includes(type),
+      } satisfies TemplateDef,
+    ]),
+  ),
 };
 
 export const TEMPLATE_ORDER = Object.keys(TEMPLATES) as TemplateKey[];
+
+/** A template's definition; an unknown key (e.g. a template a site no longer has) is Standard. */
+export function templateDef(key: TemplateKey): TemplateDef {
+  return TEMPLATES[key] ?? TEMPLATES["standard"]!;
+}
 
 export const isTemplateKey = (v: unknown): v is TemplateKey =>
   typeof v === "string" && Object.prototype.hasOwnProperty.call(TEMPLATES, v);
@@ -60,10 +81,10 @@ export function startingSections(
 ): { sections: string[]; section_data: Record<string, Record<string, string>> } {
   const sections: string[] = [];
   const section_data: Record<string, Record<string, string>> = {};
-  for (const type of TEMPLATES[to].required) {
+  for (const type of templateDef(to).required) {
     const id = newId();
     sections.push(id);
-    section_data[id] = { type, ...SECTION_TYPES[type].defaults };
+    section_data[id] = { type, ...sectionDef(type).defaults };
   }
   return { sections, section_data };
 }

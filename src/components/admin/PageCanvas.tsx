@@ -55,6 +55,8 @@ import {
   type PageKey,
   type SectionType,
 } from "@/lib/page-sections";
+import { sectionDef } from "@/lib/page-sections";
+import { templateDef } from "@/lib/templates";
 
 type F = {
   field: string;
@@ -181,7 +183,7 @@ export function PageCanvas({
     const id = sectionId(address);
     const inst = id ? resolveSection(key, pageDraft.doc, id) : null;
     if (!inst) return null;
-    const def = SECTION_TYPES[inst.type];
+    const def = sectionDef(inst.type);
     return {
       title: def.label,
       // Sections the page's template requires can be moved but not deleted.
@@ -233,7 +235,7 @@ export function PageCanvas({
     const own = (pageDraft.doc["section_data"] ?? {}) as Record<string, Record<string, string>>;
     const untouched = resolveSections(key, pageDraft.doc).every((s) => {
       if (!isRequired(key, pageDraft.doc, s.id)) return false;
-      const start: Record<string, string> = { type: s.type, ...SECTION_TYPES[s.type].defaults };
+      const start: Record<string, string> = { type: s.type, ...sectionDef(s.type).defaults };
       const data = own[s.id] ?? {};
       const names = new Set([...Object.keys(start), ...Object.keys(data)]);
       return [...names].every((n) => (data[n] ?? "") === (start[n] ?? ""));
@@ -327,7 +329,7 @@ export function PageCanvas({
     const counts = new Map<SectionType, number>();
     for (const s of pageSections) counts.set(s.type, (counts.get(s.type) ?? 0) + 1);
     return [...counts]
-      .map(([t, n]) => (n > 1 ? `${n} ${SECTION_TYPES[t].label} sections` : SECTION_TYPES[t].label))
+      .map(([t, n]) => (n > 1 ? `${n} ${sectionDef(t).label} sections` : sectionDef(t).label))
       .join(", ");
   })();
 
@@ -387,20 +389,22 @@ export function PageCanvas({
             {pendingTemplate && (
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Switch to {TEMPLATES[pendingTemplate].label}?</AlertDialogTitle>
+                  <AlertDialogTitle>
+                    Switch to {templateDef(pendingTemplate).label}?
+                  </AlertDialogTitle>
                   <AlertDialogDescription asChild>
                     <div className="space-y-2">
                       <p>
                         This clears the page's {pageSections.length}{" "}
                         {pageSections.length === 1 ? "section" : "sections"}
                         {clearing && ` (${clearing})`} and starts it
-                        {TEMPLATES[pendingTemplate].required.length
-                          ? ` with ${TEMPLATES[pendingTemplate].required
-                              .map((t) => `an ${SECTION_TYPES[t].label}`)
+                        {templateDef(pendingTemplate).required.length
+                          ? ` with ${templateDef(pendingTemplate)
+                              .required.map((t) => `an ${sectionDef(t).label}`)
                               .join(" and ")} section`
                           : " empty"}
                         .{" "}
-                        {TEMPLATES[pendingTemplate].hero
+                        {templateDef(pendingTemplate).hero
                           ? "The hero, page name, address and search settings stay."
                           : "The page name, address and search settings stay. This template has no hero; its title and summary are kept and come back if you switch back."}
                       </p>
@@ -439,7 +443,7 @@ export function PageCanvas({
                 className="justify-start"
                 onClick={() => addSection(t)}
               >
-                {SECTION_TYPES[t].label}
+                {sectionDef(t).label}
               </Button>
             ))}
           </div>
@@ -527,13 +531,13 @@ export function PageCanvas({
                 <SelectContent>
                   {TEMPLATE_ORDER.map((t) => (
                     <SelectItem key={t} value={t}>
-                      {TEMPLATES[t].label}
+                      {templateDef(t).label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               <span className="block text-xs text-muted-foreground">
-                {TEMPLATES[template].description} Switching clears the page's sections.
+                {templateDef(template).description} Switching clears the page's sections.
               </span>
             </PanelField>
           )}

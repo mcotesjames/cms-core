@@ -52,9 +52,9 @@ describe("flexible page sections", () => {
     expect(resolveSection("home", odd, "y")).toBeNull();
   });
 
-  it("text and image sections are both repeatable, so both are always offered", () => {
-    expect(availableTypes("home", home)).toEqual(["text", "image"]);
-    expect(availableTypes("page_abc", {})).toEqual(["text", "image"]);
+  it("offers the platform's sections, then the site's own (all repeatable here)", () => {
+    expect(availableTypes("home", home)).toEqual(["text", "image", "callout"]);
+    expect(availableTypes("page_abc", {})).toEqual(["text", "image", "callout"]);
   });
 
   it("adds a section with its type's defaults after the chosen section", () => {

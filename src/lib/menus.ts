@@ -9,6 +9,7 @@
  */
 import { sectionOrder, type PageKey } from "./page-sections";
 import { findPage } from "./pages";
+import { site as siteConfig } from "./site";
 
 export type LinkTarget =
   | { kind: "page"; page: PageKey }
@@ -20,9 +21,10 @@ export type MenuLink = { id: string; label: string; target: LinkTarget; button?:
 export type FooterColumn = { id: string; heading: string; links: MenuLink[] };
 export type Menus = { main: MenuLink[]; footer: FooterColumn[] };
 
-export const MAX_FOOTER_COLUMNS = 3;
-/** Above this many ordinary links the main menu pill may not fit on smaller screens. */
-export const MAIN_MENU_SOFT_LIMIT = 5;
+/** Footer menu column limit (site.config.ts `menus.footerColumns`). */
+export const MAX_FOOTER_COLUMNS = siteConfig.menus?.footerColumns ?? 3;
+/** Above this many ordinary links the main menu may not fit on smaller screens (`menus.mainMax`). */
+export const MAIN_MENU_SOFT_LIMIT = siteConfig.menus?.mainMax ?? 5;
 
 /** Names for the built-in pages in the link editor (created pages use their own names). */
 export const PAGE_NAMES: Record<string, string> = { home: "Homepage" };
@@ -45,8 +47,13 @@ export const LINK_KINDS: Array<{ kind: LinkTarget["kind"]; label: string }> = [
   { kind: "email", label: "Email" },
 ];
 
-/** The menus before they're first edited: Home in the main menu, a Contact column in the footer. */
+/**
+ * The menus before they're first edited: the site's own defaults (site.config.ts
+ * `menus.defaults`), or Home in the main menu and a Contact column in the footer.
+ */
 export function defaultMenus(settings?: { contact_email?: string } | null): Menus {
+  const own = siteConfig.menus?.defaults;
+  if (own) return own(settings);
   const email = settings?.contact_email ?? "";
   return {
     main: [{ id: "m-home", label: "Home", target: { kind: "page", page: "home" } }],

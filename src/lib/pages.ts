@@ -14,6 +14,8 @@
  */
 import { readField, resolveSections, SECTION_TYPES, type Doc } from "./page-sections";
 import { startingSections, templateOf, type TemplateKey } from "./templates";
+import { sectionDef } from "./page-sections";
+import { site } from "./site";
 export type FixedPageKey = "home";
 export type CustomPageKey = `page_${string}`;
 export type PageKey = FixedPageKey | CustomPageKey;
@@ -40,6 +42,7 @@ export const isPageKey = (k: string): k is PageKey => isFixedPage(k) || isCustom
 
 /** Web addresses that already belong to the site or the Studio. */
 export const RESERVED_SLUGS = [
+  ...(site.routes ?? []),
   "admin",
   "media",
   "studio",
@@ -168,7 +171,7 @@ export function duplicateDoc(site: Doc, source: PageKey, newId: () => string): D
     const id = newId();
     sections.push(id);
     const own: Record<string, string> = { type: inst.type };
-    for (const f of SECTION_TYPES[inst.type].fields) {
+    for (const f of sectionDef(inst.type).fields) {
       const addr = inst.fields[f.name];
       own[f.name] = addr ? readField(site, addr) : "";
     }

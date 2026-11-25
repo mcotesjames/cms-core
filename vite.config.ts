@@ -5,6 +5,7 @@ import tsConfigPaths from "vite-tsconfig-paths";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import { nitro } from "nitro/vite";
 import viteReact from "@vitejs/plugin-react";
+import { physical, rootRoute } from "@tanstack/virtual-file-routes";
 
 /**
  * Vite config for the site: TanStack Start (SSR + server functions), React, Tailwind, and for
@@ -21,6 +22,15 @@ export default defineConfig(({ command }) => ({
     tanstackStart({
       // src/server.ts wraps TanStack Start's server entry with the SSR error page.
       server: { entry: "server" },
+      // Platform routes (src/routes) and the site's own routes (src/site/routes) are mounted side
+      // by side under one root, so neither folder ever edits the other (spec section 12).
+      router: {
+        routesDirectory: ".",
+        virtualRouteConfig: rootRoute("routes/__root.tsx", [
+          physical("", "routes"),
+          physical("", "site/routes"),
+        ]),
+      },
       // Server-only code must never reach the browser bundle.
       importProtection: {
         behavior: "error",

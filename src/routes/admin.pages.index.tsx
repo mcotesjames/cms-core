@@ -9,6 +9,7 @@ import { usePages } from "@/components/admin/usePages";
 import { NewPageDialog } from "@/components/admin/NewPageDialog";
 import type { PageInfo } from "@/lib/pages";
 import { TEMPLATES, templateOf, type TemplateKey } from "@/lib/templates";
+import { templateDef } from "@/lib/templates";
 
 export const Route = createFileRoute("/admin/pages/")({ component: PagesList });
 
@@ -35,8 +36,8 @@ function templateLabel(p: PageInfo, row: { content: unknown; draft: unknown } | 
   const draft: TemplateKey =
     row?.draft != null ? templateOf(p.key, row.draft as Record<string, unknown>) : live;
   return String(draft) === String(live)
-    ? TEMPLATES[live].label
-    : `${TEMPLATES[live].label} → ${TEMPLATES[draft].label} (unpublished)`;
+    ? templateDef(live).label
+    : `${templateDef(live).label} → ${templateDef(draft).label} (unpublished)`;
 }
 
 /**

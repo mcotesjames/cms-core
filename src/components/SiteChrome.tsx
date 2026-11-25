@@ -4,13 +4,14 @@ import { useSiteContent } from "@/lib/site-content";
 import { isFilled, useShow } from "@/lib/show-if";
 import { useStudioMode } from "@/lib/studio-mode";
 import { SITE_NAME } from "@/lib/seo";
+import { site } from "@/lib/site";
 import { columnAddress, linkAddress, resolveLink, resolveMenus, type MenuLink } from "@/lib/menus";
 
-/** The site name as a text wordmark (until a site's own logo comes from its configuration). */
+/** The site's text wordmark (site.config.ts `brand.wordmark`, or its name). */
 export function Logo({ className = "" }: { className?: string }) {
   return (
     <span className={`font-display text-2xl font-semibold tracking-tight ${className}`}>
-      {SITE_NAME}
+      {site.brand?.wordmark ?? SITE_NAME}
       <span className="text-primary">.</span>
     </span>
   );

@@ -1,0 +1,35 @@
+# Checks every push and pull request: types, lint (including the platform/site boundary), tests
+# and the production build of the fixture site. It never deploys and needs no secrets.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Type check
+        run: npx tsc --noEmit -p .
+      - name: Lint
+        run: npx eslint .
+      - name: Tests
+        run: npx vitest run
+      - name: Build (Cloudflare Worker)
+        run: npx vite build

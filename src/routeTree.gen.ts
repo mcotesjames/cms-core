@@ -12,19 +12,20 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SlugRouteImport } from './routes/$slug'
 import { Route as AdminRouteImport } from './routes/admin'
-import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
-import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
-import { Route as AdminIndexRouteImport } from './routes/admin.index'
-import { Route as AdminAccountRouteImport } from './routes/admin.account'
-import { Route as AdminFeedbackRouteImport } from './routes/admin.feedback'
-import { Route as AdminMediaRouteImport } from './routes/admin.media'
-import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
-import { Route as AdminUsersRouteImport } from './routes/admin.users'
-import { Route as MediaSplatRouteImport } from './routes/media.$'
-import { Route as AdminPageSettingsKeyRouteImport } from './routes/admin.page-settings.$key'
-import { Route as AdminPagesIndexRouteImport } from './routes/admin.pages.index'
-import { Route as AdminPagesKeyRouteImport } from './routes/admin_.pages.$key'
-import { Route as ApiAuthSplatRouteImport } from './routes/api.auth.$'
+import { Route as RobotsChar91DotChar93txtRouteImport } from './routes/robots[.]txt'
+import { Route as SitemapChar91DotChar93xmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as StyleguideRouteImport } from './site/routes/styleguide'
+import { Route as AdminDotindexRouteImport } from './routes/admin.index'
+import { Route as AdminDotaccountRouteImport } from './routes/admin.account'
+import { Route as AdminDotfeedbackRouteImport } from './routes/admin.feedback'
+import { Route as AdminDotmediaRouteImport } from './routes/admin.media'
+import { Route as AdminDotsettingsRouteImport } from './routes/admin.settings'
+import { Route as AdminDotusersRouteImport } from './routes/admin.users'
+import { Route as MediaDotsplatRouteImport } from './routes/media.$'
+import { Route as AdminDotpageSettingsDotkeyRouteImport } from './routes/admin.page-settings.$key'
+import { Route as AdminDotpagesDotindexRouteImport } from './routes/admin.pages.index'
+import { Route as Admin_DotpagesDotkeyRouteImport } from './routes/admin_.pages.$key'
+import { Route as ApiDotauthDotsplatRouteImport } from './routes/api.auth.$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -41,67 +42,75 @@ const AdminRoute = AdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
-const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
-  id: '/robots.txt',
-  path: '/robots.txt',
+const RobotsChar91DotChar93txtRoute =
+  RobotsChar91DotChar93txtRouteImport.update({
+    id: '/robots.txt',
+    path: '/robots.txt',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const SitemapChar91DotChar93xmlRoute =
+  SitemapChar91DotChar93xmlRouteImport.update({
+    id: '/sitemap.xml',
+    path: '/sitemap.xml',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const StyleguideRoute = StyleguideRouteImport.update({
+  id: '/styleguide',
+  path: '/styleguide',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
-  id: '/sitemap.xml',
-  path: '/sitemap.xml',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminIndexRoute = AdminIndexRouteImport.update({
+const AdminDotindexRoute = AdminDotindexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminAccountRoute = AdminAccountRouteImport.update({
+const AdminDotaccountRoute = AdminDotaccountRouteImport.update({
   id: '/account',
   path: '/account',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminFeedbackRoute = AdminFeedbackRouteImport.update({
+const AdminDotfeedbackRoute = AdminDotfeedbackRouteImport.update({
   id: '/feedback',
   path: '/feedback',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminMediaRoute = AdminMediaRouteImport.update({
+const AdminDotmediaRoute = AdminDotmediaRouteImport.update({
   id: '/media',
   path: '/media',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminSettingsRoute = AdminSettingsRouteImport.update({
+const AdminDotsettingsRoute = AdminDotsettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminUsersRoute = AdminUsersRouteImport.update({
+const AdminDotusersRoute = AdminDotusersRouteImport.update({
   id: '/users',
   path: '/users',
   getParentRoute: () => AdminRoute,
 } as any)
-const MediaSplatRoute = MediaSplatRouteImport.update({
+const MediaDotsplatRoute = MediaDotsplatRouteImport.update({
   id: '/media/$',
   path: '/media/$',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminPageSettingsKeyRoute = AdminPageSettingsKeyRouteImport.update({
-  id: '/page-settings/$key',
-  path: '/page-settings/$key',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminPagesIndexRoute = AdminPagesIndexRouteImport.update({
+const AdminDotpageSettingsDotkeyRoute =
+  AdminDotpageSettingsDotkeyRouteImport.update({
+    id: '/page-settings/$key',
+    path: '/page-settings/$key',
+    getParentRoute: () => AdminRoute,
+  } as any)
+const AdminDotpagesDotindexRoute = AdminDotpagesDotindexRouteImport.update({
   id: '/pages/',
   path: '/pages/',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminPagesKeyRoute = AdminPagesKeyRouteImport.update({
+const Admin_DotpagesDotkeyRoute = Admin_DotpagesDotkeyRouteImport.update({
   id: '/admin_/pages/$key',
   path: '/admin/pages/$key',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+const ApiDotauthDotsplatRoute = ApiDotauthDotsplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
@@ -111,55 +120,58 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$slug': typeof SlugRoute
   '/admin': typeof AdminRouteWithChildren
-  '/robots.txt': typeof RobotsDottxtRoute
-  '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/admin/account': typeof AdminAccountRoute
-  '/admin/feedback': typeof AdminFeedbackRoute
-  '/admin/media': typeof AdminMediaRoute
-  '/admin/settings': typeof AdminSettingsRoute
-  '/admin/users': typeof AdminUsersRoute
-  '/media/$': typeof MediaSplatRoute
-  '/admin/': typeof AdminIndexRoute
-  '/admin/page-settings/$key': typeof AdminPageSettingsKeyRoute
-  '/admin/pages/$key': typeof AdminPagesKeyRoute
-  '/api/auth/$': typeof ApiAuthSplatRoute
-  '/admin/pages/': typeof AdminPagesIndexRoute
+  '/robots.txt': typeof RobotsChar91DotChar93txtRoute
+  '/sitemap.xml': typeof SitemapChar91DotChar93xmlRoute
+  '/styleguide': typeof StyleguideRoute
+  '/admin/account': typeof AdminDotaccountRoute
+  '/admin/feedback': typeof AdminDotfeedbackRoute
+  '/admin/media': typeof AdminDotmediaRoute
+  '/admin/settings': typeof AdminDotsettingsRoute
+  '/admin/users': typeof AdminDotusersRoute
+  '/media/$': typeof MediaDotsplatRoute
+  '/admin/': typeof AdminDotindexRoute
+  '/admin/page-settings/$key': typeof AdminDotpageSettingsDotkeyRoute
+  '/admin/pages/$key': typeof Admin_DotpagesDotkeyRoute
+  '/api/auth/$': typeof ApiDotauthDotsplatRoute
+  '/admin/pages/': typeof AdminDotpagesDotindexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$slug': typeof SlugRoute
-  '/robots.txt': typeof RobotsDottxtRoute
-  '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/admin/account': typeof AdminAccountRoute
-  '/admin/feedback': typeof AdminFeedbackRoute
-  '/admin/media': typeof AdminMediaRoute
-  '/admin/settings': typeof AdminSettingsRoute
-  '/admin/users': typeof AdminUsersRoute
-  '/media/$': typeof MediaSplatRoute
-  '/admin': typeof AdminIndexRoute
-  '/admin/page-settings/$key': typeof AdminPageSettingsKeyRoute
-  '/admin/pages/$key': typeof AdminPagesKeyRoute
-  '/api/auth/$': typeof ApiAuthSplatRoute
-  '/admin/pages': typeof AdminPagesIndexRoute
+  '/robots.txt': typeof RobotsChar91DotChar93txtRoute
+  '/sitemap.xml': typeof SitemapChar91DotChar93xmlRoute
+  '/styleguide': typeof StyleguideRoute
+  '/admin/account': typeof AdminDotaccountRoute
+  '/admin/feedback': typeof AdminDotfeedbackRoute
+  '/admin/media': typeof AdminDotmediaRoute
+  '/admin/settings': typeof AdminDotsettingsRoute
+  '/admin/users': typeof AdminDotusersRoute
+  '/media/$': typeof MediaDotsplatRoute
+  '/admin': typeof AdminDotindexRoute
+  '/admin/page-settings/$key': typeof AdminDotpageSettingsDotkeyRoute
+  '/admin/pages/$key': typeof Admin_DotpagesDotkeyRoute
+  '/api/auth/$': typeof ApiDotauthDotsplatRoute
+  '/admin/pages': typeof AdminDotpagesDotindexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/$slug': typeof SlugRoute
   '/admin': typeof AdminRouteWithChildren
-  '/robots.txt': typeof RobotsDottxtRoute
-  '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/admin/account': typeof AdminAccountRoute
-  '/admin/feedback': typeof AdminFeedbackRoute
-  '/admin/media': typeof AdminMediaRoute
-  '/admin/settings': typeof AdminSettingsRoute
-  '/admin/users': typeof AdminUsersRoute
-  '/media/$': typeof MediaSplatRoute
-  '/admin/': typeof AdminIndexRoute
-  '/admin/page-settings/$key': typeof AdminPageSettingsKeyRoute
-  '/admin_/pages/$key': typeof AdminPagesKeyRoute
-  '/api/auth/$': typeof ApiAuthSplatRoute
-  '/admin/pages/': typeof AdminPagesIndexRoute
+  '/robots.txt': typeof RobotsChar91DotChar93txtRoute
+  '/sitemap.xml': typeof SitemapChar91DotChar93xmlRoute
+  '/styleguide': typeof StyleguideRoute
+  '/admin/account': typeof AdminDotaccountRoute
+  '/admin/feedback': typeof AdminDotfeedbackRoute
+  '/admin/media': typeof AdminDotmediaRoute
+  '/admin/settings': typeof AdminDotsettingsRoute
+  '/admin/users': typeof AdminDotusersRoute
+  '/media/$': typeof MediaDotsplatRoute
+  '/admin/': typeof AdminDotindexRoute
+  '/admin/page-settings/$key': typeof AdminDotpageSettingsDotkeyRoute
+  '/admin_/pages/$key': typeof Admin_DotpagesDotkeyRoute
+  '/api/auth/$': typeof ApiDotauthDotsplatRoute
+  '/admin/pages/': typeof AdminDotpagesDotindexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -169,6 +181,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/robots.txt'
     | '/sitemap.xml'
+    | '/styleguide'
     | '/admin/account'
     | '/admin/feedback'
     | '/admin/media'
@@ -186,6 +199,7 @@ export interface FileRouteTypes {
     | '/$slug'
     | '/robots.txt'
     | '/sitemap.xml'
+    | '/styleguide'
     | '/admin/account'
     | '/admin/feedback'
     | '/admin/media'
@@ -204,6 +218,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/robots.txt'
     | '/sitemap.xml'
+    | '/styleguide'
     | '/admin/account'
     | '/admin/feedback'
     | '/admin/media'
@@ -221,11 +236,12 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SlugRoute: typeof SlugRoute
   AdminRoute: typeof AdminRouteWithChildren
-  RobotsDottxtRoute: typeof RobotsDottxtRoute
-  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
-  MediaSplatRoute: typeof MediaSplatRoute
-  AdminPagesKeyRoute: typeof AdminPagesKeyRoute
-  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  RobotsChar91DotChar93txtRoute: typeof RobotsChar91DotChar93txtRoute
+  SitemapChar91DotChar93xmlRoute: typeof SitemapChar91DotChar93xmlRoute
+  StyleguideRoute: typeof StyleguideRoute
+  MediaDotsplatRoute: typeof MediaDotsplatRoute
+  Admin_DotpagesDotkeyRoute: typeof Admin_DotpagesDotkeyRoute
+  ApiDotauthDotsplatRoute: typeof ApiDotauthDotsplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -255,116 +271,123 @@ declare module '@tanstack/react-router' {
       id: '/robots.txt'
       path: '/robots.txt'
       fullPath: '/robots.txt'
-      preLoaderRoute: typeof RobotsDottxtRouteImport
+      preLoaderRoute: typeof RobotsChar91DotChar93txtRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sitemap.xml': {
       id: '/sitemap.xml'
       path: '/sitemap.xml'
       fullPath: '/sitemap.xml'
-      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      preLoaderRoute: typeof SitemapChar91DotChar93xmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/styleguide': {
+      id: '/styleguide'
+      path: '/styleguide'
+      fullPath: '/styleguide'
+      preLoaderRoute: typeof StyleguideRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/': {
       id: '/admin/'
       path: '/'
       fullPath: '/admin/'
-      preLoaderRoute: typeof AdminIndexRouteImport
+      preLoaderRoute: typeof AdminDotindexRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/account': {
       id: '/admin/account'
       path: '/account'
       fullPath: '/admin/account'
-      preLoaderRoute: typeof AdminAccountRouteImport
+      preLoaderRoute: typeof AdminDotaccountRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/feedback': {
       id: '/admin/feedback'
       path: '/feedback'
       fullPath: '/admin/feedback'
-      preLoaderRoute: typeof AdminFeedbackRouteImport
+      preLoaderRoute: typeof AdminDotfeedbackRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/media': {
       id: '/admin/media'
       path: '/media'
       fullPath: '/admin/media'
-      preLoaderRoute: typeof AdminMediaRouteImport
+      preLoaderRoute: typeof AdminDotmediaRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/settings': {
       id: '/admin/settings'
       path: '/settings'
       fullPath: '/admin/settings'
-      preLoaderRoute: typeof AdminSettingsRouteImport
+      preLoaderRoute: typeof AdminDotsettingsRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/users': {
       id: '/admin/users'
       path: '/users'
       fullPath: '/admin/users'
-      preLoaderRoute: typeof AdminUsersRouteImport
+      preLoaderRoute: typeof AdminDotusersRouteImport
       parentRoute: typeof AdminRoute
     }
     '/media/$': {
       id: '/media/$'
       path: '/media/$'
       fullPath: '/media/$'
-      preLoaderRoute: typeof MediaSplatRouteImport
+      preLoaderRoute: typeof MediaDotsplatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/page-settings/$key': {
       id: '/admin/page-settings/$key'
       path: '/page-settings/$key'
       fullPath: '/admin/page-settings/$key'
-      preLoaderRoute: typeof AdminPageSettingsKeyRouteImport
+      preLoaderRoute: typeof AdminDotpageSettingsDotkeyRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/pages/': {
       id: '/admin/pages/'
       path: '/pages'
       fullPath: '/admin/pages/'
-      preLoaderRoute: typeof AdminPagesIndexRouteImport
+      preLoaderRoute: typeof AdminDotpagesDotindexRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin_/pages/$key': {
       id: '/admin_/pages/$key'
       path: '/admin/pages/$key'
       fullPath: '/admin/pages/$key'
-      preLoaderRoute: typeof AdminPagesKeyRouteImport
+      preLoaderRoute: typeof Admin_DotpagesDotkeyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
       fullPath: '/api/auth/$'
-      preLoaderRoute: typeof ApiAuthSplatRouteImport
+      preLoaderRoute: typeof ApiDotauthDotsplatRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
 }
 
 interface AdminRouteChildren {
-  AdminAccountRoute: typeof AdminAccountRoute
-  AdminFeedbackRoute: typeof AdminFeedbackRoute
-  AdminMediaRoute: typeof AdminMediaRoute
-  AdminSettingsRoute: typeof AdminSettingsRoute
-  AdminUsersRoute: typeof AdminUsersRoute
-  AdminIndexRoute: typeof AdminIndexRoute
-  AdminPageSettingsKeyRoute: typeof AdminPageSettingsKeyRoute
-  AdminPagesIndexRoute: typeof AdminPagesIndexRoute
+  AdminDotaccountRoute: typeof AdminDotaccountRoute
+  AdminDotfeedbackRoute: typeof AdminDotfeedbackRoute
+  AdminDotmediaRoute: typeof AdminDotmediaRoute
+  AdminDotsettingsRoute: typeof AdminDotsettingsRoute
+  AdminDotusersRoute: typeof AdminDotusersRoute
+  AdminDotindexRoute: typeof AdminDotindexRoute
+  AdminDotpageSettingsDotkeyRoute: typeof AdminDotpageSettingsDotkeyRoute
+  AdminDotpagesDotindexRoute: typeof AdminDotpagesDotindexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
-  AdminAccountRoute: AdminAccountRoute,
-  AdminFeedbackRoute: AdminFeedbackRoute,
-  AdminMediaRoute: AdminMediaRoute,
-  AdminSettingsRoute: AdminSettingsRoute,
-  AdminUsersRoute: AdminUsersRoute,
-  AdminIndexRoute: AdminIndexRoute,
-  AdminPageSettingsKeyRoute: AdminPageSettingsKeyRoute,
-  AdminPagesIndexRoute: AdminPagesIndexRoute,
+  AdminDotaccountRoute: AdminDotaccountRoute,
+  AdminDotfeedbackRoute: AdminDotfeedbackRoute,
+  AdminDotmediaRoute: AdminDotmediaRoute,
+  AdminDotsettingsRoute: AdminDotsettingsRoute,
+  AdminDotusersRoute: AdminDotusersRoute,
+  AdminDotindexRoute: AdminDotindexRoute,
+  AdminDotpageSettingsDotkeyRoute: AdminDotpageSettingsDotkeyRoute,
+  AdminDotpagesDotindexRoute: AdminDotpagesDotindexRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
@@ -373,11 +396,12 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SlugRoute: SlugRoute,
   AdminRoute: AdminRouteWithChildren,
-  RobotsDottxtRoute: RobotsDottxtRoute,
-  SitemapDotxmlRoute: SitemapDotxmlRoute,
-  MediaSplatRoute: MediaSplatRoute,
-  AdminPagesKeyRoute: AdminPagesKeyRoute,
-  ApiAuthSplatRoute: ApiAuthSplatRoute,
+  RobotsChar91DotChar93txtRoute: RobotsChar91DotChar93txtRoute,
+  SitemapChar91DotChar93xmlRoute: SitemapChar91DotChar93xmlRoute,
+  StyleguideRoute: StyleguideRoute,
+  MediaDotsplatRoute: MediaDotsplatRoute,
+  Admin_DotpagesDotkeyRoute: Admin_DotpagesDotkeyRoute,
+  ApiDotauthDotsplatRoute: ApiDotauthDotsplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -25,6 +25,7 @@ import {
   type MenuLink,
   type Menus,
 } from "@/lib/menus";
+import { sectionDef } from "@/lib/page-sections";
 
 type Ctx = { site: Record<string, unknown> };
 
@@ -409,6 +410,6 @@ function sectionChoices(page: PageKey, site: Record<string, unknown>) {
   return resolveSections(page, site[page] as Record<string, unknown> | undefined).map((s) => {
     const text = s.fields["text"] ? readField(site, s.fields["text"]) : "";
     const snippet = text ? ` — “${text.slice(0, 32)}${text.length > 32 ? "…" : ""}”` : "";
-    return { id: s.id, label: `${SECTION_TYPES[s.type].label}${snippet}` };
+    return { id: s.id, label: `${sectionDef(s.type).label}${snippet}` };
   });
 }

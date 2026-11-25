@@ -3,6 +3,7 @@ import { useSiteContent } from "@/lib/site-content";
 import { useStudioMode } from "@/lib/studio-mode";
 import {
   readField,
+  sectionDef,
   resolveSections,
   type Doc,
   type PageKey,
@@ -12,6 +13,7 @@ import { TEMPLATES, templateOf } from "@/lib/templates";
 import { sectionAnchor } from "@/lib/menus";
 import { useShow } from "@/lib/show-if";
 import { Footer, Header } from "@/components/SiteChrome";
+import { templateDef } from "@/lib/templates";
 
 /** A section's field values (live, or the draft inside the Studio canvas). */
 function useFieldValues(inst: SectionInstance): Record<string, string> {
@@ -70,12 +72,21 @@ function ImageSection({ inst }: { inst: SectionInstance }) {
   );
 }
 
+/** A site's own section (site.config.ts `sections`): its component gets values and CMS addresses. */
+function SiteSection({ inst }: { inst: SectionInstance }) {
+  const values = useFieldValues(inst);
+  const Component = sectionDef(inst.type).component;
+  return Component ? <Component values={values} cms={inst.fields} /> : null;
+}
+
 function Section({ inst }: { inst: SectionInstance }) {
   switch (inst.type) {
     case "text":
       return <TextSection inst={inst} />;
     case "image":
       return <ImageSection inst={inst} />;
+    default:
+      return <SiteSection inst={inst} />;
   }
 }
 
@@ -150,7 +161,7 @@ function Hero({ page }: { page: PageKey }) {
 export function PageView({ page, fallbackTitle }: { page: PageKey; fallbackTitle: string }) {
   const doc = (useSiteContent() as unknown as Doc)[page];
   const studio = useStudioMode();
-  const hasHero = TEMPLATES[templateOf(page, doc)].hero;
+  const hasHero = templateDef(templateOf(page, doc)).hero;
   return (
     <>
       <Header />

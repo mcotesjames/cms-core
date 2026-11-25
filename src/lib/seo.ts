@@ -9,13 +9,14 @@
  * default share image) live in Settings → SEO.
  */
 import type { PageKey } from "./pages";
+import { site } from "./site";
 
-/** The site's real address: canonical links and the sitemap always point here. */
-export const SITE_URL = "https://mcotesjames.com";
+/** The site's real address (site.config.ts `url`): canonical links and the sitemap point here. */
+export const SITE_URL = site.url;
 /** The address without its scheme, as shown to editors ("mcotesjames.com/about"). */
 export const SITE_HOST = new URL(SITE_URL).host;
-/** The site's name: the default for Settings → SEO → Site name and the title ending. */
-export const SITE_NAME = "MCJames";
+/** The site's name (site.config.ts): the default for Settings → SEO → Site name and the title ending. */
+export const SITE_NAME = site.name;
 export const TITLE_LIMIT = 60;
 export const DESCRIPTION_LIMIT = 155;
 

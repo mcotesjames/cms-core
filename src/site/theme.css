@@ -1,0 +1,80 @@
+/*
+ * This site's theme (spec section 12 → extension points): the public site's look. Imported by the
+ * platform stylesheet (src/styles.css); its rules are unlayered, so they override the platform's
+ * default tokens (declared in @layer base there). Public components use the `.site-*` classes
+ * below; the Studio is never styled from here.
+ *
+ * To restyle a site, change the tokens in this :root block and the rules beneath.
+ */
+:root {
+  /* Uncomment to override the platform's defaults for this site:
+  --background: #ffffff;
+  --foreground: #111111;
+  --primary: oklch(0.6 0.2 37);
+  --page-gutter: clamp(1.25rem, 5vw, 4rem);
+  */
+}
+
+/* ---- Public site: skeleton layout. Scoped to `.site-*` classes so the Studio is untouched. ---- */
+.site-skip { position: absolute; left: -999px; top: 0; padding: .5rem 1rem; background: var(--foreground); color: var(--background); z-index: 50; }
+.site-skip:focus { left: 1rem; }
+
+.site-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; padding: 1.25rem var(--page-gutter); border-bottom: 1px solid var(--border); }
+.site-brand { color: inherit; text-decoration: none; }
+.site-nav { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1.5rem; }
+.site-nav-link { color: inherit; text-decoration: none; }
+.site-nav-link:hover, .site-nav-link[aria-current="page"] { text-decoration: underline; text-underline-offset: .25em; }
+.site-nav-button { padding: .45rem 1rem; border-radius: 999px; background: var(--foreground); color: var(--background); }
+.site-nav-button:hover { text-decoration: none; opacity: .85; }
+.site-nav-toggle { display: none; padding: .4rem .9rem; border: 1px solid var(--border); border-radius: 999px; font: inherit; }
+.site-link-pending { opacity: .5; cursor: default; }
+@media (max-width: 767px) {
+  .site-nav-toggle { display: inline-flex; }
+  .site-nav { display: none; flex-basis: 100%; flex-direction: column; align-items: flex-start; padding-top: .5rem; }
+  .site-header[data-open="true"] .site-nav { display: flex; }
+}
+
+.site-main { padding-bottom: 4rem; }
+/* Hero and sections share one centred container, so their left edges line up; text inside keeps
+   to a readable measure. */
+.site-hero, .site-section { max-width: calc(var(--wide) + 2 * var(--page-gutter)); margin: 0 auto; }
+.site-section { padding: 2.5rem var(--page-gutter); }
+.site-hero { padding: clamp(4rem, 12vw, 9rem) var(--page-gutter) 2.5rem; }
+.site-hero h1 { font-size: var(--type-h1); font-weight: var(--weight-h1); line-height: 1.05; margin: 0; max-width: 18ch; }
+.site-hero-intro { margin: 1.5rem 0 0; max-width: var(--measure); font-size: var(--type-lead); line-height: 1.5; color: var(--muted-foreground); white-space: pre-line; }
+
+.site-text h2 { font-size: var(--type-h2); line-height: 1.2; margin: 0 0 1rem; max-width: var(--measure); }
+.site-text-body { max-width: var(--measure); white-space: pre-line; }
+
+.site-image[data-width="full"] { max-width: none; padding-left: 0; padding-right: 0; }
+.site-image img { display: block; width: 100%; height: auto; }
+.site-image figcaption { margin-top: .75rem; font-size: .9rem; color: var(--muted-foreground); }
+.site-image[data-width="full"] figcaption { padding: 0 var(--page-gutter); }
+
+.site-footer { padding: 3rem var(--page-gutter) 2rem; border-top: 1px solid var(--border); background: var(--muted); }
+.site-footer-top { display: flex; flex-wrap: wrap; gap: 2.5rem 4rem; justify-content: space-between; }
+.site-footer-intro { max-width: 28rem; }
+.site-footer-intro h2 { font-size: 1.4rem; margin: 0 0 .5rem; }
+.site-footer-intro p { margin: 0; color: var(--muted-foreground); white-space: pre-line; }
+.site-footer-nav { display: flex; flex-wrap: wrap; gap: 2rem 3.5rem; }
+.site-footer-col { display: flex; flex-direction: column; gap: .4rem; }
+.site-footer-col h3 { font-size: .8rem; text-transform: uppercase; letter-spacing: .12em; color: var(--muted-foreground); margin: 0 0 .25rem; }
+.site-footer-link { color: inherit; text-decoration: none; }
+.site-footer-link:hover { text-decoration: underline; text-underline-offset: .25em; }
+.site-footer-legal { margin: 3rem 0 0; font-size: .85rem; color: var(--muted-foreground); }
+
+/* Shown in the Studio canvas when a page has no sections yet. */
+.studio-empty-page { margin: 2rem var(--page-gutter); min-height: 8rem; }
+
+/* Callout (a site section): a tinted band with a heading, text and a button. */
+.site-callout-inner { padding: clamp(2rem, 5vw, 3.5rem); border-radius: calc(var(--radius) * 3); background: var(--muted); }
+.site-callout h2 { font-size: var(--type-h2); line-height: 1.2; margin: 0 0 .75rem; max-width: var(--measure); }
+.site-callout p { margin: 0 0 1.5rem; max-width: var(--measure); white-space: pre-line; }
+.site-callout-button { display: inline-block; padding: .6rem 1.2rem; border-radius: 999px; background: var(--foreground); color: var(--background); text-decoration: none; }
+.site-callout-button:hover { opacity: .85; }
+
+/* Styleguide (a site route): token swatches and type samples. */
+.site-styleguide-swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); gap: 1rem; margin: 0; padding: 0; list-style: none; }
+.site-styleguide-swatch { border: 1px solid var(--border); border-radius: calc(var(--radius) * 2); overflow: hidden; font-size: .85rem; }
+.site-styleguide-swatch span { display: block; height: 4rem; }
+.site-styleguide-swatch code { display: block; padding: .5rem .75rem; }

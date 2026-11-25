@@ -4,10 +4,11 @@ An editorial, canvas-first CMS: editors change pages, entries and records direct
 
 - **Spec:** [`cms-platform-spec.md`](cms-platform-spec.md) is the single source of truth: architecture, editor behaviour, content model, roadmap and change log.
 - **Working rules:** [`AGENTS.md`](AGENTS.md) (and the `AGENTS.md` files in subfolders).
+- **This site:** everything specific to one site is in [`src/site/`](src/site) — its config (`site.config.ts`), designed sections, bespoke routes and theme. The rest is the shared platform.
 
 ## Status
 
-The site and Studio run locally on a local D1 database and R2 bucket, and a staging copy runs on Cloudflare at https://cms-core-staging.mcotesjames.workers.dev (not indexed). The public site is a plain skeleton: a homepage built from a hero and Text and Image sections, with more pages created in the Studio. The Studio at `/admin` uses email + password sign-in; new accounts wait for an admin's approval. In `npm run dev` there are also one-click shortcut accounts.
+The site and Studio run locally on a local D1 database and R2 bucket, and a staging copy runs on Cloudflare at https://cms-core-staging.mcotesjames.workers.dev (not indexed). The public site is a plain skeleton: a homepage built from a hero and Text and Image sections, with more pages created in the Studio. The fixture site in `src/site/` adds a Callout section, a Landing page template and a `/styleguide` page. GitHub Actions checks every push (types, lint, tests, build). The Studio at `/admin` uses email + password sign-in; new accounts wait for an admin's approval. In `npm run dev` there are also one-click shortcut accounts.
 
 ## Development
 

@@ -15,6 +15,7 @@ import { usePages } from "./usePages";
 import { slugProblem, slugify } from "@/lib/pages";
 import { TEMPLATES, TEMPLATE_ORDER, type TemplateKey } from "@/lib/templates";
 import { cn } from "@/lib/utils";
+import { templateDef } from "@/lib/templates";
 
 /**
  * "+ New page": a template, a name and a web address (suggested from the name). Creates an
@@ -90,9 +91,9 @@ export function NewPageDialog({
                       : "border-border hover:bg-accent",
                   )}
                 >
-                  <span className="block text-sm">{TEMPLATES[t].label}</span>
+                  <span className="block text-sm">{templateDef(t).label}</span>
                   <span className="mt-1 block text-xs text-muted-foreground">
-                    {TEMPLATES[t].description}
+                    {templateDef(t).description}
                   </span>
                 </button>
               ))}

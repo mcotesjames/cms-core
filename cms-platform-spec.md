@@ -432,7 +432,7 @@ The platform ships one template, **Standard**:
 | + menu offers | Every section type whose declaration allows Standard |
 | Nav and footer | Shown |
 
-Config shape: `{ label, description, hero: boolean, starting: SectionType[], required: SectionType[], allowed: (type) => boolean }`. New layouts ("Landing page", "Long-form report", the original build's "Interactive") are site templates declared in site config, not new routes. A site section can declare that it is only allowed on its own template.
+Platform shape (`lib/templates.ts`): `{ label, description, hero: boolean, starting: SectionType[], required: SectionType[], allowed: (type) => boolean }`. New layouts ("Landing page", "Long-form report", the original build's "Interactive") are site templates declared in `site.config.ts` as `{ label, description, hero, required, sections }` (section 9), not new routes: `required` are the starting sections, `sections` what the + menu offers. A site section can limit itself to some templates (`templates: [...]`). A page whose stored template the site no longer has falls back to Standard (`templateDef`).
 
 - **Stored** as `template` in the page's `site_content` row; missing = Standard. **Built-in pages are always Standard.**
 - **Chosen** in + New page; **switched** in the page editor's empty panel → Template.
@@ -484,80 +484,66 @@ The skeleton site (2026-11-25) ships the page hero plus Text and Image only; the
 
 ## 8. Component Structure
 
+The platform code stays where it grew (decided in Phase 4: moving it into a `platform/` folder would touch every import for no gain); the site's code lives in `src/site/`.
+
 ```text
 src/
-  data/                 ← the only code touching D1 / R2 (section 2)
-    entries.ts records.ts pages.ts lists.ts menus.ts settings.ts
-    media.ts users.ts comments.ts publish.ts auth.ts
-  platform/             ← shared CMS code, identical on every site
-    studio/             ← shell, top bar, page switcher, side panel, lists, forms, Users, Feedback
-    canvas/             ← frame bridge, outlines, selection, in-place text, comment pins
-    blocks/             ← entry block renderers + panel editors (shared by canvas and live site)
-    sections/           ← platform section library
-    lib/                ← seo, templates, empty-content helper, blocks-convert, menus
-    routes/             ← platform routes: root, /admin, /$slug, content routes, sitemap, robots
+  data/                 ← platform: the only code touching D1 / R2 (section 2)
+  components/           ← platform: Studio (admin/), public chrome, section renderers, UI kit
+  lib/                  ← platform: page model, templates, menus, SEO, media, show-if …
+    site-config.ts      ← the site config contract: types, defineSite(), validation
+    site.ts             ← the platform's one way in to the site's config
+  routes/               ← platform routes: root, /, /$slug, /admin…, /media, sitemap, robots, api
+  styles.css            ← platform tokens (in @layer base) + Studio styles; imports the site theme
   site/                 ← this site only
     site.config.ts      ← section 9
-    sections/           ← the site's designed sections (renderer + fields + editor layout)
+    sections/           ← the site's designed sections (React components)
     routes/             ← the site's bespoke routes, if any
-    theme/              ← brand tokens, fonts
-  routes.ts             ← mounts platform/routes and site/routes (TanStack virtual file routes)
+    theme.css           ← token overrides and the public `.site-*` styles
 migrations/
-  platform/ site/
+  platform/             ← (site/ when a site first needs its own table)
 ```
 
-- **Shared renderers:** the same block and section components render on the live site and the canvas.
-- **`platform/` never imports from `site/`** except through `site.config.ts`, enforced by a lint rule. This is what lets a platform update ship to every site.
-- **Routes from both folders** are mounted with TanStack's virtual file routes (`physical()`), so platform and site routes never share a folder. ☐ Confirm this works with TanStack Start in Phase 4.
+- **Shared renderers:** the same section components render on the live site and the canvas. A site section's component receives `{ values, cms }`: each field's current value (live, or the draft in the canvas) and its CMS address for `data-cms` / `data-cms-image`.
+- **Platform code never imports from `src/site/`**; it reads the site only through `@/lib/site`. ESLint (`no-restricted-imports`) enforces it; site files, `lib/site.ts` and tests are exempt. This is what lets a platform update ship to every site.
+- **Routes from both folders** are mounted with TanStack virtual file routes (`vite.config.ts`: `rootRoute("routes/__root.tsx", [physical("", "routes"), physical("", "site/routes")])`), confirmed with TanStack Start 1.168. Site routes list their top-level addresses in `routes` in site config, so pages created in the Studio can't take them (a test checks every route file is listed).
+- **Theme layering:** platform tokens sit in `@layer base`; `src/site/theme.css` is imported after them, so a site overrides any token with a plain `:root { … }` rule. The Studio's dark theme (`:root:has(.studio)`) is unaffected.
 - **Editors are keyed by what they edit** (`<Editor key={id} />`).
 
 ---
 
-## 9. Site Configuration ☐
+## 9. Site Configuration ◐
 
-Everything that varies per site is declared in `src/site/site.config.ts`. Shared components read it; they never hard-code site values.
+Everything that varies per site is declared in `src/site/site.config.ts` with `defineSite()` (contract: `src/lib/site-config.ts`). Shared code reads it through `@/lib/site`; it never hard-codes site values.
+
+**Built (Phase 4):**
 
 ```typescript
 export default defineSite({
-  name: "{{SITE_NAME}}",
-  domain: "{{DOMAIN}}",
-  brand: { logo, accent, fonts, selectionColours },
-  studio: { home: "pages" /* or a content type key */ },
-  auth: { openSignup: true, method: "email-code" },
-
-  contentTypes: {
-    // key: { label, plural, path: "/insights", template: "article", blocks?, defaultAuthor? }
+  name: "MCJames",                       // titles, structured data, the Studio
+  url: "https://mcotesjames.com",        // https origin, no trailing slash: canonical links, sitemap
+  brand: { wordmark: "MCJames" },        // text wordmark until the site has a logo file
+  media: { maxDimension: 2400, quality: 0.82 },  // applied in the browser before upload
+  menus: {
+    footerColumns: 3, mainMax: 5,
+    defaults: (settings) => ({ main: [...], footer: [...] }),  // until the Studio edits them
   },
-
-  recordTypes: {
-    // key: { label, plural, fields: { name: text(), sector: multiSelect(OPTIONS) … },
-    //        ordering: "manual" | { field, direction }, placeholderFlag: true, pinnable?: true }
-  },
-
   sections: {
-    // key: { label, fields, items?, positionedItems?, repeats, templates, options,
-    //        editorLayout?: "static", from?: { recordType | contentType | list } }
+    // key: { label, repeatable, fields: [{ name, label, multi?, image?, options? }],
+    //        defaults: { field: value }, templates?: [templateKey], component }
   },
-
-  pages: {
-    // built-in pages: { key, name, path (fixed), hero: { fields }, defaultSections, seoDefaults }
+  templates: {
+    // key: { label, description, hero: boolean, required: [type], sections: [type] }
   },
-
-  templates: { /* site-specific page templates, added to Standard */ },
-
-  settings: { /* site-wide fields: contact email, social links, form recipient, disclaimers … */ },
-
-  menus: { mainMax: 5, footerColumns: 3, defaults: { main: [...], footer: [...] } },
-
-  seo: { titleSuffix: " — {{SITE_NAME}}", organization: { … } },
-
-  media: { maxDimension: 2400, quality: 82 },   // applied in the browser before upload
+  routes: ["styleguide"],                // top-level addresses of src/site/routes
 });
 ```
 
-`defineSite()` validates the config at build time against the platform version's config contract. A release that renames or reshapes something fails the site's build with a clear message, never at runtime.
+`defineSite()` checks the config when the code loads, so a bad config fails the build and the tests with a message naming the problem (`site.config.ts: …`): the address isn't a bare https origin; a section or template key isn't lowercase or reuses a platform key (`text`, `image`, `standard`); a section has a field called `type` or a default for a field it doesn't have, or names an unknown template; a template names an unknown section, requires one it doesn't offer, or offers none; a route isn't a bare slug; media quality is outside 0–1.
 
-**Field types:** `text`, `longText`, `richText`, `image`, `file`, `link` (points at a target, as menus do), `select`, `multiSelect`, `date`, `number`, `boolean`, `reference` (to a record or entry), `list` (repeating group).
+**Still to come** (added to the contract with the features that need them): `contentTypes` and `recordTypes` (Phase 6), `pages` (more built-in pages), `settings` fields, `seo` (title suffix, organisation), `auth` options, `studio.home`, logo files and fonts in `brand`.
+
+**Field types:** today a section field is text, multi-line text (`multi`), an image (`image`) or a choice (`options`). Planned: `richText`, `file`, `link` (points at a target, as menus do), `multiSelect`, `date`, `number`, `boolean`, `reference` (to a record or entry), `list` (repeating group).
 
 ---
 
@@ -594,7 +580,7 @@ Reverting code never restores the database, so every data change must be safe th
 ## 12. Working Process
 
 ### Repos
-- **Platform repo:** `platform/`, `data/`, `migrations/platform/`, scripts, this spec, and a **test site** (a fixture `src/site/`).
+- **Platform repo:** everything outside `src/site/` (section 8), `migrations/platform/`, scripts, this spec, and a **test site** (a fixture `src/site/`: MCJames, a Callout section, a Landing template and a `/styleguide` route).
 - **Each site:** its own repo, created from the platform repo, with the platform added as a second git remote (`platform`). It holds the platform plus its own `src/site/` and `migrations/site/`, deployed as its own Worker.
 - A platform package is reconsidered only if the number of sites makes merging updates a burden.
 
@@ -606,18 +592,18 @@ Reverting code never restores the database, so every data change must be safe th
 
 | A site adds | Where | How the platform picks it up |
 |---|---|---|
-| A section type | `src/site/sections/` + `config.sections` | Merged into the section library, the + menu, the renderer and the side panel |
-| A record type | `config.recordTypes` | List, form drawer, validation and record grid built from its field declarations |
-| A page template | `config.templates` | Offered in + New page after Standard |
-| A bespoke route or feature | `src/site/routes/` | Mounted alongside platform routes (section 8) |
-| Brand, fonts, theme | `src/site/theme/` | Read by the public site and the Studio accent |
+| A section type ✅ | `src/site/sections/` + `config.sections` | Merged into the section library, the + menu, the renderer and the side panel |
+| A record type ☐ | `config.recordTypes` | List, form drawer, validation and record grid built from its field declarations (Phase 6, with records) |
+| A page template ✅ | `config.templates` | Offered in + New page after Standard |
+| A bespoke route or feature ✅ | `src/site/routes/` + `config.routes` | Mounted alongside platform routes (section 8); its address is reserved |
+| Brand and theme ✅ | `config.brand` + `src/site/theme.css` | Wordmark in the header; tokens and `.site-*` styles override the platform's (section 8) |
 | A site-only table (rare) | `migrations/site/` | Applied after platform migrations |
 
 - **Never patch platform files in a site repo.** If a site needs the platform to behave differently, the change goes into the platform for every site, behind a config option if needed.
 - **Default to the site.** Build a feature in `src/site/` first; promote it to the platform only when a second site needs it.
 
 ### Platform updates
-1. **Build and test in the platform repo.** CI builds the test site, which uses every extension point (a custom section, a record type, a template, a bespoke route). A change that would break a site's additions fails here first.
+1. **Build and test in the platform repo.** CI (`.github/workflows/ci.yml`, GitHub Actions on every push and pull request: type check, lint, tests, build; no deploys) builds the test site, which uses every extension point (a custom section, a template, a bespoke route, a theme; a record type once records exist). A change that would break a site's additions fails here first.
 2. **Release:** tag a version (`v1.4.0`) with a changelog entry. A change to the config contract is a major version, with upgrade notes.
 3. **Roll out per site:** merge the tag from the `platform` remote (only platform files change, so conflicts are rare), run the site's checks, back up and migrate staging, check staging, then production.
 4. **Know who's behind:** each site records its platform version (`PLATFORM_VERSION`), so outdated sites are visible.
@@ -677,12 +663,13 @@ Nothing deployed can be edited until this exists.
 - ✅ Staging: migrated, the seeded test accounts removed, `BETTER_AUTH_SECRET` set, deployed; sign-in endpoints checked on Cloudflare.
 - ☐ Email codes and password-reset emails, once Resend is set up (decision 1: email + password now; codes later).
 
-### Phase 4 — Split platform and site ◐
+### Phase 4 — Split platform and site ✅
 - ✅ The original build's features replaced by a plain skeleton site: homepage, pinned hero, Text and Image sections, plain header and footer (2026-11-25).
-- ☐ Split shared code into `platform/` and site code into `site/`; introduce `site.config.ts`, `defineSite()` and the extension points (section 12).
-- ☐ Confirm TanStack virtual file routes mount `platform/routes` and `site/routes`.
-- ☐ Lint rule: `platform/` never imports from `site/`.
-- ☐ The fixture test site uses every extension point (a custom section, a record type, a template, a bespoke route), built fresh; CI builds it.
+- ✅ Site code in `src/site/`; platform code stays in place (section 8). `site.config.ts`, `defineSite()` with validation, and the extension points (section 12): sections, templates, routes, theme, brand, media and menu settings.
+- ✅ TanStack virtual file routes mount `routes/` and `site/routes/` (confirmed with Start 1.168).
+- ✅ Lint rule: platform code never imports from `src/site/` (only through `@/lib/site`).
+- ✅ The fixture test site uses the extension points (Callout section, Landing template, `/styleguide` route, theme file); GitHub Actions CI type-checks, lints, tests and builds it.
+- ☐ Record types as an extension point: moved to Phase 6, with records.
 
 ### Phase 5 — Core scope: decide what every site ships with ☐
 A decision phase, no code. Pages alone aren't enough: the core ships with a small set of **content types**, **record types** and **sections** that most client sites need, each one switched on, off or renamed in `site.config.ts` rather than rebuilt per site. The outcome is recorded in section 14 → Made and built in Phase 6.
@@ -717,7 +704,7 @@ Questions to settle alongside: which items are **on by default** vs **available 
 ### Phase 6 — Core features ☐
 Builds the core decided in Phase 5, each through the platform extension points so sites can switch them on, off or rename them.
 - ☐ Content types: entries, the visual entry editor and block catalogue (section 6), Settings screens, list screens, public archive and detail routes, sitemap and SEO for entries. The original build's article editor (git history, commit `5b54fbe`) is the starting point.
-- ☐ Records: list with a form drawer, fields from config, option lists, manual or field ordering, record comments, with the draft step and preview cards the original build lacked.
+- ☐ Records: `recordTypes` in site config (the record-type extension point deferred from Phase 4), list with a form drawer, fields from config, option lists, manual or field ordering, record comments, with the draft step and preview cards the original build lacked.
 - ☐ List items inside sections (cards, accordions, positioned items), with drafts.
 - ☐ The sections decided in Phase 5 (at least Content feed, Record grid / list and Form).
 - ☐ Reference handling: links and cards to entries and records hide when the target is unpublished or deleted.
@@ -870,6 +857,8 @@ Still unchecked in the browser, for when entries return: replacing an image; add
 - **Re-apply drafts after background refetches** in a preview canvas.
 - **Draw editing canvases in the browser only** (`ssr: "data-only"` for `?studio=1`).
 - **Never put a button inside a `<label>`.**
+- **Never index config objects by a string key directly** under `noUncheckedIndexedAccess`; go through a lookup that falls back (`sectionDef`, `templateDef`), so content saved under a section or template the site later drops still renders and edits.
+- **After changing `vite.config.ts` routing, expect one broken load** while Vite re-optimises dependencies (`504 Outdated Optimize Dep`, an empty Studio); reload before debugging.
 - **Keep one copy of zod.** Better Auth needs zod 4; with the project on zod 3 the production bundle resolved Better Auth's imports to zod 3 and every auth request failed (`.loose is not a function`), while `vite dev` worked. Test auth on the built Worker, not just the dev server.
 - **A built Worker reads `.dev.vars` from beside its config** (`.output/server/`), not the project root; copy it there for `wrangler dev` tests of a build.
 - **The workers.dev address follows the account's subdomain**, which can change (it did when R2 was enabled); use the address `wrangler deploy` prints.
@@ -880,6 +869,8 @@ Still unchecked in the browser, for when entries return: replacing an image; add
 ## 17. Change Log
 
 Newest first. Each entry: date, what changed, how, and any follow-ups.
+
+- **2026-11-25 · Phase 4: platform and site split · Claude** — Site code now lives in `src/site/` (config, sections, routes, theme); platform code stays where it is (section 8). New contract `src/lib/site-config.ts` (`defineSite()` validates at load, so at build and in tests) and gateway `src/lib/site.ts`; an ESLint rule stops platform code importing `src/site/` directly. Values that came from constants now come from config: site name and address (SEO), wordmark, image resize settings, footer column and main-menu limits, default menus, reserved page addresses. Section types and templates are open strings: site sections render through their own component (`{ values, cms }`) and appear in the + menu and side panel; site templates add `{ hero, required, sections }`; unknown ones fall back safely (`sectionDef`, `templateDef`). Virtual file routes mount `src/site/routes` beside `src/routes`. Platform tokens moved into `@layer base`; the public `.site-*` styles moved to `src/site/theme.css`. Fixture site: Callout section, Landing template (no hero, required Callout), `/styleguide` route (noindex). GitHub Actions CI (type check, lint, tests, build; read-only, no deploys). 95 tests (new: config validation, Landing template, route reservation). Clicked through locally: homepage and `/styleguide`; a Landing page created from + New page (no hero, Callout present without Delete, + menu offers Text, Image and Callout; an added Callout has its fields and Delete). Follow-ups: record types with records (Phase 6); staging not yet redeployed with this code.
 
 - **2026-11-25 · Collaborator role and automatic access · Claude** — The top Studio role is renamed from `owner` to `collaborator` (migration `0002`, data only; `asOwner` → `asCollaborator`, `user:owner` → `user:collaborator`, dev account `dev-collaborator`). The first sign-up whose email matches the site's `COLLABORATOR_EMAIL` (a Worker secret; `.dev.vars` locally) is approved as collaborator automatically, but only while the site has no collaborator; everyone else still waits for approval. Better Auth `databaseHooks.user.create.after`. Checked locally: a non-matching sign-up stays pending, the matching one becomes collaborator. Staging migrated (your account is now collaborator), secret set, deployed. The lesson on first-sign-up access now describes the email-bound version.
 
