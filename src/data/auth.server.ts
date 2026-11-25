@@ -8,13 +8,17 @@
  *   Sign-up never sets `role` or `approvedAt`.
  * - Sessions are HTTP-only cookies (Secure on https). Sign-in and sign-up are rate-limited per
  *   IP (Cloudflare's `cf-connecting-ip`), counted in D1 so the limit holds across Workers.
- * - Secrets: `BETTER_AUTH_SECRET` (a Worker secret; `.dev.vars` locally). `SIGNUP_OPEN=false`
- *   turns sign-up off (invite-only).
+ * - The collaborator (the site's developer) gets in without waiting: the first sign-up whose email
+ *   matches `COLLABORATOR_EMAIL` is approved as collaborator automatically, as long as the site
+ *   has no collaborator yet. Anyone else, including a stranger who finds a new site first, waits.
+ * - Secrets: `BETTER_AUTH_SECRET` and `COLLABORATOR_EMAIL` (Worker secrets; `.dev.vars` locally).
+ *   `SIGNUP_OPEN=false` turns sign-up off (invite-only).
  */
 import { betterAuth } from "better-auth";
+import { eq } from "drizzle-orm";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { bindings } from "./env.server";
-import { db } from "./db.server";
+import { db as getDb, nowIso } from "./db.server";
 import { hashPassword, verifyPassword } from "./password.server";
 import { accounts, rateLimits, sessions, users, verifications } from "./schema";
 
@@ -30,7 +34,7 @@ export async function authFor(request: Request) {
     basePath: "/api/auth",
     secret: env.BETTER_AUTH_SECRET,
     trustedOrigins: [origin],
-    database: drizzleAdapter(await db(), {
+    database: drizzleAdapter(await getDb(), {
       provider: "sqlite",
       schema: { users, sessions, accounts, verifications, rateLimits },
     }),
@@ -64,11 +68,30 @@ export async function authFor(request: Request) {
         "/change-password": { window: 60, max: 5 },
       },
     },
+    databaseHooks: {
+      user: { create: { after: (user) => grantCollaborator(user, env.COLLABORATOR_EMAIL) } },
+    },
     advanced: {
       ipAddress: { ipAddressHeaders: ["cf-connecting-ip", "x-forwarded-for"] },
       useSecureCookies: origin.startsWith("https://"),
     },
   });
+}
+
+/** Approves a new account as collaborator if it's the site's collaborator email and none exists yet. */
+async function grantCollaborator(user: { id: string; email: string }, email: string | undefined) {
+  if (!email || user.email.trim().toLowerCase() !== email.trim().toLowerCase()) return;
+  const d = await getDb();
+  const [existing] = await d
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.role, "collaborator"))
+    .limit(1);
+  if (existing) return;
+  await d
+    .update(users)
+    .set({ role: "collaborator", approvedAt: nowIso() })
+    .where(eq(users.id, user.id));
 }
 
 /** The signed-in user's id for this request, or null. */

@@ -3,8 +3,10 @@
  * roles, and admin-set passwords. Sign-in itself is Better Auth (auth.server.ts, /api/auth).
  *
  * Roles: `pending` (signed up, waiting) · `editor` (everything except Users) · `admin`
- * (also approves, changes roles, removes access, sets passwords) · `owner` (an admin who can't
- * be removed or demoted; set with `npm run user:owner`). Nobody changes their own role or access.
+ * (also approves, changes roles, removes access, sets passwords) · `collaborator` (the site's
+ * developer: an admin who can't be removed or demoted; the first sign-up with the site's
+ * `COLLABORATOR_EMAIL` becomes it automatically, or set it with `npm run user:collaborator`).
+ * Nobody changes their own role or access.
  */
 import { createServerFn } from "@tanstack/react-start";
 import { and, asc, eq } from "drizzle-orm";
@@ -113,7 +115,7 @@ export const listProfiles = createServerFn({ method: "GET" })
 
 const assignable = z.enum(["editor", "admin"]);
 
-/** Loads another user for an admin action; refuses your own account and the owner's. */
+/** Loads another user for an admin action; refuses your own account and the collaborator's. */
 async function otherUser(id: string, me: StudioUser) {
   if (id === me.id) throw new Error("You can't change your own access.");
   const { db } = await import("./db.server");
@@ -121,7 +123,8 @@ async function otherUser(id: string, me: StudioUser) {
   const d = await db();
   const [target] = await d.select().from(users).where(eq(users.id, id)).limit(1);
   if (!target) throw new Error("That account no longer exists.");
-  if (target.role === "owner") throw new Error("The owner's access can't be changed.");
+  if (target.role === "collaborator")
+    throw new Error("The collaborator's access can't be changed.");
   return { d, users, target };
 }
 

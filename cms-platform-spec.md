@@ -55,7 +55,7 @@ A site's code can only reach its own bindings, so client data is separated by in
 
 ### Data layer (`src/data/`)
 - **The only code that talks to D1 or R2.** Routes, components and the Studio call named functions (`getPage`, `saveDraft`, `publishEntry`, `listRecords`, `uploadMedia`…), never the database directly.
-- **Access is denied by default.** Every server function lives in `src/data/` and starts its chain with one access middleware from `src/data/access.ts`: `asVisitor` for public reads (live columns only, never `draft`), or `asEditor` / `asAdmin` / `asOwner` for Studio functions, which check the session and role before the handler runs and pass the user on as `context.user`. (These are the `publicFn` / `studioFn` wrappers: TanStack Start's compiler needs each `createServerFn(…).handler(…)` chain written out in place, so the wrapper is a middleware rather than a factory.) `src/test/server-fns.test.ts` lists every server function and fails if one is defined elsewhere or skips the middleware. These checks replace Supabase's RLS policies: drafts, unapproved accounts and the media library are protected here.
+- **Access is denied by default.** Every server function lives in `src/data/` and starts its chain with one access middleware from `src/data/access.ts`: `asVisitor` for public reads (live columns only, never `draft`), or `asEditor` / `asAdmin` / `asCollaborator` for Studio functions, which check the session and role before the handler runs and pass the user on as `context.user`. (These are the `publicFn` / `studioFn` wrappers: TanStack Start's compiler needs each `createServerFn(…).handler(…)` chain written out in place, so the wrapper is a middleware rather than a factory.) `src/test/server-fns.test.ts` lists every server function and fails if one is defined elsewhere or skips the middleware. These checks replace Supabase's RLS policies: drafts, unapproved accounts and the media library are protected here.
 - **Each field has exactly one writer** (section 5 → Page settings). The data layer enforces it: Publish preserves live values of fields it doesn't own.
 - **Validation from config:** each record type's `data`, each section's fields and each list item are checked against a schema (zod) generated from the declarations in `site.config.ts`. The Studio form, the data layer and the public site share that one definition.
 - **Schema and migrations with Drizzle** (D1 / SQLite dialect); generated SQL migration files are committed.
@@ -80,7 +80,7 @@ A site's code can only reach its own bindings, so client data is separated by in
 - **Sign-up** asks for first name, last name, email and password and creates a `pending` user; sign-up never sets a role. `SIGNUP_OPEN=false` makes a site invite-only.
 - **Rate limits** (stored in D1, so they hold across Workers): sign-in 5 per minute, sign-up 5 per hour, password change 5 per minute, per IP (`cf-connecting-ip`).
 - **Secret:** `BETTER_AUTH_SECRET`, a Worker secret per environment (`.dev.vars` locally); generated and piped into `wrangler secret put`, never printed.
-- **The owner** is set by `npm run user:owner -- <email> [--remote]` after that person signs up; there is no "first sign-up becomes owner".
+- **The collaborator** (the site's developer, MCJames) gets in without waiting: the first sign-up whose email matches the site's `COLLABORATOR_EMAIL` (a Worker secret; `.dev.vars` locally) is approved as collaborator automatically, as long as the site has no collaborator yet. Anyone else, including a stranger who reaches a new site's sign-up first, waits for approval. `npm run user:collaborator -- <email> [--remote]` hands the role to another signed-up account.
 - **Local development** also has shortcut accounts without passwords (`db/seed.dev-users.sql`, `cms_dev_user` cookie), compiled out of builds and never seeded anywhere else.
 
 ### Local development
@@ -124,7 +124,7 @@ JSON is stored as `TEXT` and validated in the data layer; IDs are generated in c
 | `list_items` | Items inside sections (cards, accordions, positioned items…) | `id`, `list`, `position`, `data` (JSON) |
 | `site_content` | One row per page, plus `settings`, `menus`, `lists` (list drafts), `pages` (created-page index) | `key`, `data` (JSON), `draft` (JSON) |
 | `media` | Media library | `id`, `key`, `filename`, `mime`, `bytes`, `width`, `height`, `alt`, `previous_key`, `uploaded_by`, `created_at` |
-| `users` | Studio accounts | `id`, `email`, `first_name`, `last_name`, `role` (`pending` / `editor` / `admin` / `owner`), `created_at`, `approved_at` |
+| `users` | Studio accounts | `id`, `email`, `first_name`, `last_name`, `role` (`pending` / `editor` / `admin` / `collaborator`), `created_at`, `approved_at` |
 | `sessions`, `accounts`, `verifications` | Sign-in sessions and codes (Better Auth's own tables) | as Better Auth defines them |
 | `comments` | Feedback threads and replies | `id`, `thread_id` (null for a thread, the thread's id for a reply), `anchor` (element address), `opened_on` (`page:<key>`, `post:<id>`, `record:<table>:<id>`), `position` (JSON), `body`, `author_id`, `assignee_id` (who it's for), `device`, `resolved_at`, `resolved_by`, `created_at`, `updated_at` |
 
@@ -138,11 +138,11 @@ JSON is stored as `TEXT` and validated in the data layer; IDs are generated in c
 | Role | Can |
 |---|---|
 | `pending` | Sign in and see "Waiting for approval". Nothing else. |
-| `editor` | Everything in the Studio except Users and site settings marked owner-only. |
+| `editor` | Everything in the Studio except Users and site settings marked collaborator-only. |
 | `admin` | Everything, including approving and removing users (never their own access). |
-| `owner` | MCJames. Same as admin; can't be removed. Created by the setup script. |
+| `collaborator` | MCJames, the site's developer. Same as admin; can't be removed or demoted. The first sign-up with the site's `COLLABORATOR_EMAIL` becomes the collaborator automatically. |
 
-There is no "first sign-up becomes admin" rule; the setup script creates the owner and the client's first admin.
+There is no "whoever signs up first gets in" rule: only the collaborator email is approved automatically. The client's first admin signs up and the collaborator approves them as admin.
 
 ---
 
@@ -568,7 +568,7 @@ The setup script (`scripts/new-site`) does, in order:
 2. Create the D1 databases and R2 buckets for production and staging.
 3. Write the site's Worker config with **those** binding IDs (never copied from another site).
 4. Apply migrations (platform, then site).
-5. Seed: owner account (MCJames), the client's first admin, default settings and menus from site config.
+5. Seed default settings and menus from site config (never accounts). Set `COLLABORATOR_EMAIL`; MCJames signs up and becomes the collaborator automatically, then approves the client's first admin.
 6. Set secrets (Resend key, auth secret).
 7. Deploy staging and production, then add the custom domain.
 
@@ -670,9 +670,9 @@ Proves the stack on Cloudflare itself before anything else is built on it. Done 
 ### Phase 3 — Auth ✅
 Nothing deployed can be edited until this exists.
 - ✅ Better Auth sign-in with email + password (decision 1), on D1 (section 2 → Auth); rate limits per IP on sign-in, sign-up and password change. Per-email limits come with email codes.
-- ✅ Roles in use: approved as editor or admin; admins change roles, remove access (signing the person out) and set temporary passwords; the owner and your own account can't be changed. Users is admin-only (sidebar and server).
+- ✅ Roles in use: approved as editor or admin; admins change roles, remove access (signing the person out) and set temporary passwords; the collaborator and your own account can't be changed. Users is admin-only (sidebar and server).
 - ✅ Your account: change your own name and password.
-- ✅ The owner set by script (`npm run user:owner -- <email> [--remote]`); `SIGNUP_OPEN=false` for invite-only sites. *The client's first admin: they sign up and the owner approves them as admin.*
+- ✅ The collaborator (MCJames) approved automatically when signing up with the site's `COLLABORATOR_EMAIL` while the site has none; `npm run user:collaborator` hands the role over; `SIGNUP_OPEN=false` for invite-only sites. *The client's first admin: they sign up and the collaborator approves them as admin.*
 - ✅ The dev sign-in shortcuts kept for local development only (separate seed, compiled out of builds).
 - ✅ Staging: migrated, the seeded test accounts removed, `BETTER_AUTH_SECRET` set, deployed; sign-in endpoints checked on Cloudflare.
 - ☐ Email codes and password-reset emails, once Resend is set up (decision 1: email + password now; codes later).
@@ -859,7 +859,7 @@ Still unchecked in the browser, for when entries return: replacing an image; add
 - **Scroll-driven sections can't be edited in place;** give them a static editor layout.
 - **Give the Studio its own scoped theme.**
 - **Decide the media strategy up front:** expiring signed links are a trap (the platform uses stable R2 paths).
-- **Don't use first-sign-up-becomes-admin triggers;** seed the owner instead.
+- **Don't let whoever signs up first take over a new site;** bind automatic access to the developer's own email (`COLLABORATOR_EMAIL`), and only while the site has no collaborator.
 - **Section links need stable id-based anchors** (`section-<id>`).
 - **Draw canvas overlays outside `<body>`** when a MutationObserver watches the body.
 - **Overlays that track page state** must also watch state attributes (`data-open`, `aria-hidden`, `aria-expanded`) and `transitionend`.
@@ -881,6 +881,8 @@ Still unchecked in the browser, for when entries return: replacing an image; add
 
 Newest first. Each entry: date, what changed, how, and any follow-ups.
 
+- **2026-11-25 · Collaborator role and automatic access · Claude** — The top Studio role is renamed from `owner` to `collaborator` (migration `0002`, data only; `asOwner` → `asCollaborator`, `user:owner` → `user:collaborator`, dev account `dev-collaborator`). The first sign-up whose email matches the site's `COLLABORATOR_EMAIL` (a Worker secret; `.dev.vars` locally) is approved as collaborator automatically, but only while the site has no collaborator; everyone else still waits for approval. Better Auth `databaseHooks.user.create.after`. Checked locally: a non-matching sign-up stays pending, the matching one becomes collaborator. Staging migrated (your account is now collaborator), secret set, deployed. The lesson on first-sign-up access now describes the email-bound version.
+
 - **2026-11-25 · Phase 3: sign-in · Claude** — Better Auth 1.7.20 on D1 with email + password (decision 1): migration `0001_auth` adds sessions, accounts, verifications and rate limits and rebuilds `users` for Better Auth (hand-edited to convert existing dates and to use D1's `defer_foreign_keys`). PBKDF2-SHA256 password hashing via Web Crypto; rate limits in D1; `/api/auth/*` route (never cached); sessions joined to `users` for roles in the access middleware. Studio: real sign-in and sign-up, Users with approve-as-editor/admin, role changes, remove access and temporary passwords (admin-only), Your account (name, password), sidebar shows Users to admins only. `npm run user:owner`. Seed split: content (`db/seed.sql`, every environment) and local-only shortcut accounts (`db/seed.dev-users.sql`). Project moved to zod 4 (one copy; zod 3 broke Better Auth in the production bundle). Staging migrated, test accounts removed, secret set, deployed at its new address https://cms-core-staging.mcotesjames.workers.dev (the account subdomain changed). Checked locally (sign-up → pending, approval, password sign-in, editor limits, rate limit, password change) and on the built Worker; staging endpoints respond. 84 tests. Follow-ups: email codes and reset emails with Resend; CPU time of password hashing on the free Workers plan (decision 8).
 
 - **2026-11-25 · Environments and content flow · Claude** — Docs only. Section 2 now defines the three environments (local to experiment, staging to preview features to the client, production for the public), the rule "code goes up, content comes down" with launch as the one upward content copy, what a content copy includes and excludes (never users, sessions or, by default, comments), and two sync tools: `content:launch` (staging → empty production, once, with a backup) and `content:pull` (production → staging or local). Added to Phase 7 (launch steps) and Phase 8 (the tools); recorded under Decisions → Made.
@@ -895,7 +897,7 @@ Newest first. Each entry: date, what changed, how, and any follow-ups.
 
 - **2026-11-25 · Spec tidy · Claude** — Docs only. Phase 0 marked done (its remaining lint items are tracked once, under Phase 1). The "unchecked in the browser" note updated with what the Phase 1 click-through covered. Open decision 6 now points at Phase 1 / Phase 7 instead of the merged Phase 2. Removed the references to `cms-platform-plan.md`, which isn't in the repo.
 
-- **2026-11-25 · Phase 1: data layer on D1 + R2 (merged with former Phase 2) · Claude** — The site and Studio now run on Cloudflare D1 and R2 through `src/data/`; Supabase is gone. Added `wrangler.jsonc` (D1 `DB`, R2 `MEDIA`), the Drizzle schema (`src/data/schema.ts`: site_content, entries, records, list_items, media, users, comments) with its first migration (`migrations/platform/0000_init.sql`), a fixture seed and `db:*` scripts. Access is denied by default: every server function starts with `asVisitor` / `asEditor` / `asAdmin` / `asOwner` (a test enforces it). Public reads (`content.ts`) return only live columns; Studio modules cover entries, site rows and list publishing (one D1 batch), records, media, comments and users. Components keep their shapes (`shapes.ts` maps generic rows). Sign-in is a dev-only placeholder (pick a seeded account); a built Worker has no signed-in user. Media: browser resize (2400px / 0.82), R2 under `library/…`, served at `/media/<key>` with immutable caching; share images made absolute. Approving a user now sets role `admin` (as every approved account was before). Records are sorted A–Z by name in the Studio (previously Z–A). Checks: type check, 110 tests and the build pass; every area clicked through locally (see roadmap). Follow-ups: the remaining `any` types and hook warnings; Worker rendering with the edge cache; a smoke test of the built Worker; replacing the builder's Vite preset.
+- **2026-11-25 · Phase 1: data layer on D1 + R2 (merged with former Phase 2) · Claude** — The site and Studio now run on Cloudflare D1 and R2 through `src/data/`; Supabase is gone. Added `wrangler.jsonc` (D1 `DB`, R2 `MEDIA`), the Drizzle schema (`src/data/schema.ts`: site_content, entries, records, list_items, media, users, comments) with its first migration (`migrations/platform/0000_init.sql`), a fixture seed and `db:*` scripts. Access is denied by default: every server function starts with `asVisitor` / `asEditor` / `asAdmin` / `asCollaborator` (a test enforces it). Public reads (`content.ts`) return only live columns; Studio modules cover entries, site rows and list publishing (one D1 batch), records, media, comments and users. Components keep their shapes (`shapes.ts` maps generic rows). Sign-in is a dev-only placeholder (pick a seeded account); a built Worker has no signed-in user. Media: browser resize (2400px / 0.82), R2 under `library/…`, served at `/media/<key>` with immutable caching; share images made absolute. Approving a user now sets role `admin` (as every approved account was before). Records are sorted A–Z by name in the Studio (previously Z–A). Checks: type check, 110 tests and the build pass; every area clicked through locally (see roadmap). Follow-ups: the remaining `any` types and hook warnings; Worker rendering with the edge cache; a smoke test of the built Worker; replacing the builder's Vite preset.
 
 - **2026-11-25 · Phase 0: fork and tidy · Claude** — This repo is now the platform repo, cut off from the original client build: its GitHub remote, `.env`, `supabase/`, `.lovable/`, build output, Drizzle/Postgres migrations and Lovable migration config are gone, so nothing here can reach that build's database, Lovable project or Worker. The original client's name, logo, symbol, copy, people and addresses are removed: placeholder wordmarks (`src/assets/brand/wordmark-{dark,light}.svg`) and `BrandSymbol`; `SITE_NAME` / `SITE_URL` / `SITE_HOST` in `lib/seo.ts` (mcotesjames.com, until site config exists); the original CSS class prefix replaced by `studio` / `studio-*` (Studio, per section 4 → Studio theme) and `site-*` (public site). The original features (investments, publications, pillars, biography, Interactive) stay as neutral fixtures until Phase 4. Lint formatting fixed, unused UI components and packages removed, `package-lock.json` replaces `bun.lock`. Checks: type check, 110 tests and build pass; not clicked through in a browser (no database until Phase 2). Follow-ups: the `any` types and hook warnings (Phase 1); `@lovable.dev/vite-tanstack-config` is still the Vite preset — replace with a plain TanStack Start + Nitro config when the Worker config is written (Phase 2).
 

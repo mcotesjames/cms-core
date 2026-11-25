@@ -15,6 +15,13 @@
       "when": 1795619552131,
       "tag": "0001_auth",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1795621045637,
+      "tag": "0002_rename_owner_to_collaborator",
+      "breakpoints": true
     }
   ]
 }

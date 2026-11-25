@@ -14,6 +14,8 @@ export type Bindings = {
   SITE_ENV?: string;
   /** Signs sessions (a Worker secret; `.dev.vars` locally). */
   BETTER_AUTH_SECRET?: string;
+  /** The site developer's email: its first sign-up becomes the collaborator automatically. */
+  COLLABORATOR_EMAIL?: string;
   /** "false" makes the Studio invite-only (no sign-up form). */
   SIGNUP_OPEN?: string;
 };

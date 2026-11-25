@@ -3,7 +3,7 @@
  *
  * Each `createServerFn` in `src/data/` starts its chain with exactly one of these middlewares,
  * `.middleware([asVisitor])` for public reads of live content, or `asEditor` / `asAdmin` /
- * `asOwner` for Studio functions, which run only for a signed-in user with at least that role
+ * `asCollaborator` for Studio functions, which run only for a signed-in user with at least that role
  * and receive it as `context.user`. `src/test/server-fns.test.ts` fails if a server function
  * skips them or is defined outside `src/data/`.
  *
@@ -21,7 +21,7 @@ export type StudioUser = {
   role: Role;
 };
 
-const RANK: Record<Role, number> = { pending: 0, editor: 1, admin: 2, owner: 3 };
+const RANK: Record<Role, number> = { pending: 0, editor: 1, admin: 2, collaborator: 3 };
 export const hasRole = (user: Pick<StudioUser, "role"> | null | undefined, role: Role) =>
   !!user && RANK[user.role] >= RANK[role];
 
@@ -38,6 +38,7 @@ const requireRole = (role: Role) =>
 
 /** Any approved Studio user (editor and up). */
 export const asEditor = requireRole("editor");
-/** Admins and the owner: users, owner-only settings. */
+/** Admins and the collaborator: users, and settings above editors. */
 export const asAdmin = requireRole("admin");
-export const asOwner = requireRole("owner");
+/** The collaborator only (the site's developer: MCJames). */
+export const asCollaborator = requireRole("collaborator");

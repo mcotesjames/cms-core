@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
  * src/data/ and starts with one of the access middlewares from src/data/access.ts.
  */
 const ROOT = join(__dirname, "..");
-const ACCESS = /^\s*\.middleware\(\[\s*as(Visitor|Editor|Admin|Owner)\b/;
+const ACCESS = /^\s*\.middleware\(\[\s*as(Visitor|Editor|Admin|Collaborator)\b/;
 
 function files(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {

@@ -21,10 +21,10 @@ npm test         # vitest
 npm run lint     # eslint
 npm run build    # production build (Cloudflare Worker via Nitro)
 npm run db:generate  # after changing src/data/schema.ts: write a new migration
-npm run user:owner -- you@example.com [--remote]  # make a signed-up account the owner
+npm run user:collaborator -- you@example.com [--remote]  # hand the collaborator role to a signed-up account
 ```
 
-Local sign-in needs a `.dev.vars` file (gitignored) with `BETTER_AUTH_SECRET=<random>`; create one with `printf 'BETTER_AUTH_SECRET=%s\n' "$(openssl rand -base64 32)" > .dev.vars`.
+Local sign-in needs a `.dev.vars` file (gitignored) with `BETTER_AUTH_SECRET=<random>` and `COLLABORATOR_EMAIL=<your email>` (the first sign-up with that email gets full access automatically). Create the secret with `printf 'BETTER_AUTH_SECRET=%s\n' "$(openssl rand -base64 32)" >> .dev.vars`.
 
 Deploying staging (needs `npx wrangler login` once):
 

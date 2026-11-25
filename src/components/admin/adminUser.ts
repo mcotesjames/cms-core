@@ -9,11 +9,12 @@ export type AdminUser = {
   email: string;
   first_name: string;
   last_name: string;
-  role: "pending" | "editor" | "admin" | "owner";
+  role: "pending" | "editor" | "admin" | "collaborator";
 };
 
-/** Admins (and the owner) manage users; editors do everything else. */
-export const isAdmin = (u: Pick<AdminUser, "role">) => u.role === "admin" || u.role === "owner";
+/** Admins (and the collaborator) manage users; editors do everything else. */
+export const isAdmin = (u: Pick<AdminUser, "role">) =>
+  u.role === "admin" || u.role === "collaborator";
 
 /** The signed-in, approved admin. Provided by AdminGate around every admin screen. */
 export const AdminUserContext = createContext<AdminUser | null>(null);

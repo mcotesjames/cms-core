@@ -19,7 +19,7 @@ import { profileName } from "@/lib/comments";
 export const Route = createFileRoute("/admin/users")({ component: Users });
 
 const ROLE_LABEL: Record<string, string> = {
-  owner: "Owner",
+  collaborator: "Collaborator",
   admin: "Admin",
   editor: "Editor",
   pending: "Waiting",
@@ -29,7 +29,7 @@ const MIN_PASSWORD = 10;
 
 /**
  * Everyone with an account. New accounts wait here until an admin approves them as an Editor
- * (everything except Users) or an Admin (also this screen). The owner, and your own account,
+ * (everything except Users) or an Admin (also this screen). The collaborator, and your own account,
  * can't be changed here.
  */
 function Users() {
@@ -56,7 +56,7 @@ function Users() {
     }
     await qc.invalidateQueries({ queryKey: profilesQuery.queryKey });
   };
-  const locked = (p: StudioProfile) => p.id === me.id || p.role === "owner";
+  const locked = (p: StudioProfile) => p.id === me.id || p.role === "collaborator";
 
   const Row = ({ p, children }: { p: StudioProfile; children?: React.ReactNode }) => (
     <li className="flex flex-wrap items-center gap-3 border-b border-border py-3 last:border-0">

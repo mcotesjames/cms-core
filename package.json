@@ -16,7 +16,7 @@
     "db:migrate": "wrangler d1 migrations apply DB --local",
     "db:seed": "wrangler d1 execute DB --local --file db/seed.sql && wrangler d1 execute DB --local --file db/seed.dev-users.sql",
     "db:reset": "rm -rf .wrangler/state && npm run db:migrate && npm run db:seed",
-    "user:owner": "node scripts/user-owner.mjs"
+    "user:collaborator": "node scripts/user-collaborator.mjs"
   },
   "overrides": {
     "rolldown": "1.2.1"

@@ -101,7 +101,7 @@ export const media = sqliteTable("media", {
   createdAt: text("created_at").notNull().default(now),
 });
 
-export const ROLES = ["pending", "editor", "admin", "owner"] as const;
+export const ROLES = ["pending", "editor", "admin", "collaborator"] as const;
 export type Role = (typeof ROLES)[number];
 
 /** Timestamps Better Auth writes (stored as milliseconds; it reads and writes Date objects). */
