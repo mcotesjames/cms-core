@@ -700,44 +700,29 @@ Nothing deployed can be edited until this exists.
 - ✅ The fixture test site uses the extension points (Callout section, Landing template, `/styleguide` route, theme file); GitHub Actions CI type-checks, lints, tests and builds it.
 - ☐ Record types as an extension point: moved to Phase 6, with records.
 
-### Phase 5 — Core scope: decide what every site ships with ☐
-A decision phase, no code. Pages alone aren't enough: the core ships with a small set of **content types**, **record types** and **sections** that most client sites need, each one switched on, off or renamed in `site.config.ts` rather than rebuilt per site. The outcome is recorded in section 14 → Made and built in Phase 6.
+### Phase 5 — Core scope: what the platform ships with ✅ *(2026-11-25)*
+A decision phase, no code. **The platform ships features, not content:** no predefined sections, record types or content types. Each site declares its own (sections, records, content types, forms, settings groups) in `site.config.ts`, and the platform provides the machinery that makes any of them work. Signed off feature by feature; the outcome is section 14 → Made → *Core scope* and is built in Phase 6.
 
-**Criteria for the core:** needed by most client sites · generic enough to rename without code (labels, paths, fields) · no client-specific design · worth maintaining for every site.
+**Already in the platform:** pages (hero + sections, templates) · drafts and Publish · menus · settings · media library · SEO · users and roles · feedback comments · environments and deploys.
 
-**Candidates to decide** (proposals, not decisions):
+**Core, built in Phase 6:** field types · content types · records · repeating items in sections · forms · redirects · configurable Global settings (details in section 14 → Made → Core scope).
 
-| Kind | Candidate | What it is | Notes |
-|---|---|---|---|
-| Content type | **Articles** | News, blog or insights posts with their own page, block editor, author and date | Proven in the original build (restorable from git history, commit `5b54fbe`) |
-| Content type | **Case studies** | Project write-ups with their own page | Could be Articles with a different template, or Projects records with detail pages |
-| Content type | **Events** | Dated entries with a location and an archive of past events | Less common; maybe site-level |
-| Record type | **Team members** | Name, role, photo, bio, links | Very common |
-| Record type | **Testimonials** | Quote, name, role, company, photo | Very common |
-| Record type | **Logos / clients / partners** | Name, logo, link | Common |
-| Record type | **FAQs** | Question, answer, category | Common |
-| Record type | **Projects** | Name, summary, images, services, link | Needed by the portfolio (section 15) |
-| Section | **Content feed** | Latest entries of a content type | Needed with any content type |
-| Section | **Record grid / list** | Records of a type, optional filters | Needed with any record type |
-| Section | **Form** | Contact or enquiry form emailed via Resend | Nearly every site |
-| Section | **Call to action** | Heading, text, button link | Common, small |
-| Section | **Gallery** | Several images in a grid or carousel | Common |
-| Section | **Quote** | A pull quote with attribution | Small; also an Article block |
-| Section | **Video** | Vimeo / YouTube / uploaded, with caption | Common |
-| Section | **Cards** | Items edited inside the section (list items) | Restores the list-item system |
-| Studio | **Analytics dashboard** | Visits, top pages, referrers, countries, devices (Workers Analytics Engine, cookieless, admin-only) | See Phase 8 |
-| Studio | **Redirects** | Old address → new address, for launches and renamed pages | Important when replacing an old site |
+**Core, later (Phases 8–9):** Changes screen (everything unpublished, Publish all) · preview links · version history · scheduled publishing · email notifications · analytics dashboard · backups and content sync · reusable sections · form builder · form file uploads · records CSV import/export · drag-to-reorder · client-changeable Studio colours.
 
-Questions to settle alongside: which items are **on by default** vs **available but off**; the **default names and addresses** (e.g. Articles at `/articles`, renamable); whether **Case studies** is its own content type or a template of Articles.
+**Not in the platform:** a visual content-type builder · site search (site-level when needed) · e-commerce, memberships, payments · complex redirect patterns (regular expressions) · WordPress import as a feature (a one-off script per launch, Phase 7) · **multilingual in v1** (adding it later means a schema change and migration across every site, accepted knowingly).
 
 ### Phase 6 — Core features ☐
-Builds the core decided in Phase 5, each through the platform extension points so sites can switch them on, off or rename them.
-- ☐ Content types: entries, the visual entry editor and block catalogue (section 6), Settings screens, list screens, public archive and detail routes, sitemap and SEO for entries. The original build's article editor (git history, commit `5b54fbe`) is the starting point.
-- ☐ Records: `recordTypes` in site config (the record-type extension point deferred from Phase 4), list with a form drawer, fields from config, option lists, manual or field ordering, record comments, with the draft step and preview cards the original build lacked.
-- ☐ List items inside sections (cards, accordions, positioned items), with drafts.
-- ☐ The sections decided in Phase 5 (at least Content feed, Record grid / list and Form).
-- ☐ Reference handling: links and cards to entries and records hide when the target is unpublished or deleted.
-- ☐ Paste from Google Docs (and Word, Substack) into entries; legacy Markdown/HTML conversion for imported content.
+Builds the core signed off in Phase 5 (section 14 → Made → Core scope), each declared per site through `site.config.ts`; the fixture site uses every one so CI proves them.
+- ☐ **Field types:** text, long text, rich text (fixed toolbar, structured data), image, file, link, choice / multiple choice (fixed or Studio-editable option lists), date, number, yes/no, reference, repeating group; label, help, required, default; validation on screen and server from the declaration. Option-list screens in the Studio.
+- ☐ **Content types:** `contentTypes` in site config; list, visual entry editor (blocks: rich text, image, quote, video, gallery, divider; body typed on the page with a floating toolbar), Settings screen; detail and archive routes, Content feed section, RSS, sitemap, SEO. The original build's article editor (git history, commit `5b54fbe`) is the starting point.
+- ☐ **Records:** `recordTypes` in site config (name, fields, title field, ordering); list, form drawer with preview card, drafts + Publish, comments; record list section; reference fields; delete warns where used.
+- ☐ **Repeating items in sections:** a section's repeating group edited on the canvas (add, reorder, delete, min/max), with the page's draft.
+- ☐ **Forms:** forms in site config, Form section, Turnstile + honeypot + rate limit, saved then emailed via Resend, optional auto-reply, Submissions inbox (read, handled, delete, CSV export, auto-delete after 12 months by default).
+- ☐ **Redirects:** Settings → Redirects (admins and editors), 301/302, simple `*` wildcards, hit counts, loop checks, ask-first redirect on address changes (rules collapse), not-found log with one-click redirects, paste/CSV import.
+- ☐ **Global settings:** rename Site settings → Global settings, tabs per group; platform groups (SEO & sharing, forms, contact email, logo + favicon, announcement banner) plus groups declared per site; draft + Publish like everything else.
+- ☐ **Media:** drop files onto the Media screen to upload in bulk.
+- ☐ Reference handling everywhere: links and cards to entries and records hide when the target is unpublished or deleted.
+- ☐ Paste from Google Docs (and Word, Substack) into rich text; legacy Markdown/HTML conversion for imported content.
 
 ### Phase 7 — Portfolio (site #1) ☐
 - ☐ `site.config.ts` and designed sections for mcotesjames.com (section 15), using the core features it needs.
@@ -758,14 +743,21 @@ Builds the core decided in Phase 5, each through the platform extension points s
 - ☐ Once clients review on staging: changes reach `main` through pull requests (checks must pass) rather than direct pushes.
 - ☐ Content sync tools (section 2 → Environments and content flow): `content:launch` (staging → production, once; needed first in Phase 7) and `content:pull` (production → staging or local). Content and media only, never users, sessions or (by default) comments; always back up the target first.
 - ☐ Cron jobs: daily database backup to the MCJames backup bucket; resolved-comment clean-up.
-- ☐ Analytics dashboard in the Studio (if not in the Phase 5 core).
+- ☐ Analytics dashboard in the Studio (visits, top pages, referrers, countries, devices; cookieless).
+- ☐ Email notifications via Resend: comments for you, accounts awaiting approval, password resets and email sign-in codes.
 - ☐ Error monitoring for deployed Workers.
 
 ### Phase 9 — Editor polish and later ☐
-- ☐ Secret preview links for drafts (open decision 6).
+- ☐ Changes screen: everything unpublished across the site (pages, entries, records, menus, Global settings) with Publish all and Discard per item.
+- ☐ Secret preview links for drafts.
+- ☐ Version history: see and restore earlier published versions of a page, entry or record.
+- ☐ Scheduled publishing.
+- ☐ Reusable sections: one block used on many pages, edited once.
+- ☐ Form builder in the Studio (to discuss first); file uploads in forms.
+- ☐ Records CSV import and export.
+- ☐ Drag and drop: blocks, sections and items on the canvas; reordering in record lists.
+- ☐ Client-changeable Studio colours.
 - ☐ No layout shift when the panel opens or closes.
-- ☐ Drag and drop: blocks and sections on the canvas; reordering in record lists.
-- ☐ Revisit open decisions 2–4 once the entry editor is back.
 
 ### Feature inventory
 **In the code now:** shared editor shell (StudioShell) · in-place text · hover outline and ↑ / ↓ / + bar · click to select · panel for the selected thing only · two-level selection colours and flash · draft / Publish / Discard · flexible pages from a section library (Text, Image) · page templates (Standard) · new pages, duplicate any page · editable menus · empty content hidden · feedback comments with exact-spot pins, Alt-click and the Feedback list · page switcher with dots and Cmd/Ctrl+K · shared SEO builder and Settings screens · Studio dark theme · media library on R2 · sign-in placeholder, approval and users.
@@ -792,10 +784,20 @@ Still unchecked in the browser, for when entries return: replacing an image; add
 - **Accounts:** names required; approval before access; sign-up can be turned off per site.
 - **SEO:** one shared builder, automatic fallbacks, edited on Settings screens only.
 - **Devices:** desktop-only editing; tablet and mobile via the toggle.
-- **Drag and drop:** deferred to Phase 9.
+- **Drag and drop:** files can be dropped onto the Media screen (Phase 6); never onto canvas elements (images are placed by click or pick). Reordering by drag is Phase 9; ↑ / ↓ until then.
+- **Core scope (Phase 5, 2026-11-25):** the platform ships **features, not content**: no predefined sections, record types or content types; each site declares its own in `site.config.ts`, and structure stays in code (no visual content-type builder: designs depend on field names, a schema stored in the database would drift between environments, and field changes need content migrations).
+  - **Field types:** text, long text, rich text (fixed toolbar: bold, italic, link, bulleted/numbered lists, H2/H3; stored as structured data, never raw HTML), image (alt text required unless decorative), file, link (the menus' picker: page, section, entry, URL, email), choice / multiple choice, date (optional time), number, yes/no, reference (one or many records or entries; hidden when the target is unpublished or deleted), repeating group. Every field: label, help text, required/optional, default, validation on screen and server generated from the declaration. A choice field is either **fixed** (in code: design choices such as contained / full width) or an **editable option list** (managed in the Studio: categories, tags, services). Not offered: colour pickers, HTML/code fields, per-field styling.
+  - **Content types:** entries with their own page. Declared per site: names, address, template (Article by default; sites add their own), extra fields, categories/tags, archive on/off. Built-in fields: title, web address, summary, featured image, publish date, author, SEO, draft/published. Studio: list, visual editor with blocks (rich text, image, quote, video, gallery, divider), Settings screen, a "Content" sidebar group. Site: detail page, paginated archive with category filters, Content feed section, RSS, sitemap, SEO. Body text is typed on the page with a floating toolbar; author is a plain name, or a pick from a people record type when the site has one. Not in v1: visitor comments, approval workflows.
+  - **Records:** structured, reusable data without its own page. A record type needs only a name, its fields, a title field and an ordering (manual or by a field); "featured" and "category" are ordinary fields. Studio: list, form drawer with a preview card, drafts + Publish, comments, a "Records" sidebar group. Site: a record list section (all or filtered by any yes/no or choice field, count, optional visitor filters; design per site) and reference fields. Deleting warns and lists where a record is used.
+  - **Repeating items in sections:** a section's repeating group (cards, steps, FAQs, stats) edited on the canvas: text in place, other fields in the panel, add / reorder / delete, optional min and max, saved with the page's draft. Items live in one section on one page; when needed on a second page they become a record type. No nesting.
+  - **Forms:** declared per site (fields, required, optional steps); clients edit the wording around the form; recipients and auto-reply in Global settings. Submissions are validated on the server, protected by Turnstile, a honeypot and a rate limit, saved first and then emailed via Resend. Submissions inbox: read, mark handled, delete, CSV export, deleted automatically after 12 months by default. Fields stay in code in v1; a Studio form builder is to be discussed later.
+  - **Redirects:** Settings → Redirects, for admins and editors: from path → page, entry or address; 301 by default, 302 optional; simple `*` wildcards (optionally carried into the target; exact rules win); hit counts and last used; loops blocked. Changing an address asks whether to add a redirect (yes by default), and rules collapse instead of chaining. A not-found log (address and count only) offers one-click redirects. Launch import by paste or CSV, checked before saving. Whole-domain redirects stay at Cloudflare.
+  - **Global settings** (renamed from Site settings; Users, Redirects and Your account stay in the Settings group): tabs per group; platform groups on every site (SEO & sharing, forms, contact email, logo + favicon, announcement banner with optional dates) plus groups each site declares; the same draft + Publish as all content; editable by anyone; empty settings hidden. Colours and fonts stay in code.
+  - **Publish scope:** Publish puts live what's being edited (a page plus the shared menus and Global settings drafts made alongside it); other pages' drafts are untouched.
+- **Multilingual:** not in v1 (decided 2026-11-25); adding it later needs a schema change and migration across every site.
 - **Infrastructure:** Cloudflare Worker + D1 + R2 per site (plus staging), on one MCJames account; data layer as the only database access; Resend for email.
-- **Rendering:** public pages render on the Worker and are edge-cached; Publish clears the affected URLs. No pre-rendering, rebuilds or deploy hooks.
-- **Access checks:** every server function goes through `studioFn` / `publicFn`; denied by default, enforced by a test.
+- **Rendering:** public pages render on the Worker and are edge-cached, keyed by build and content version (section 2 → Rendering), so Publish and deploys are live everywhere without purging. No pre-rendering, rebuilds or deploy hooks.
+- **Access checks:** every server function starts with one access middleware (`asVisitor`, `asEditor`, `asAdmin`, `asCollaborator`); denied by default, enforced by a test.
 - **Auth library:** Better Auth on D1. **Schema and migrations:** Drizzle.
 - **Sign-in method (2026-11-25):** email + password now, hashed with PBKDF2 in the Worker; email codes and password-reset emails added once Resend is set up. Until then admins set temporary passwords.
 - **Media:** images resized in the browser before upload; stable R2 paths.
@@ -806,12 +808,12 @@ Still unchecked in the browser, for when entries return: replacing an image; add
 
 ### Open
 1. ~~Sign-in method~~ — decided (see Made).
-2. **Body text editing:** body text is written in the side panel rather than typed on the page. Keep it, or move it onto the canvas to match the canvas-first principle? *Applies to the entry editor and the Text section; settle when entries return (Phase 6).*
-3. **Image drop:** dropping an image onto an entry was lost in the original build when the editors were unified. Restore it? *Settle in Phase 6.*
+2. ~~Body text editing~~ — decided: typed on the page with a floating toolbar (Made → Core scope).
+3. ~~Image drop~~ — decided: not onto canvas elements; bulk drop onto the Media screen (Made → Drag and drop).
 4. **Long-distance moves:** repeated ↑ to move a block far up a long entry or page. Acceptable until drag and drop (Phase 9)?
 5. ~~Repo model~~ — decided (see Made).
-6. **Draft previews before publish:** the Studio canvas is the only preview. With Worker rendering, secret preview links are now cheap (render drafts for a signed token, never cached). Build them with the edge cache (Phase 1), or leave them for Phase 9?
-7. **Core scope:** which content types, record types, sections and Studio features ship with every site, which are on by default, and their default names and addresses. Candidates and criteria are in section 13 → Phase 5; the outcome moves to Made and is built in Phase 6.
+6. ~~Draft previews before publish~~ — decided: secret preview links in Phase 9.
+7. ~~Core scope~~ — decided in Phase 5 (Made → Core scope).
 8. **Cloudflare account per client, or one for all?** One MCJames account is simplest (one bill, re-charged in the hosting fee; sites still isolated by their own Worker, D1 and R2) but every site shares the account's free allowances; one account per client gives each its own allowance and makes hand-over clean, at the cost of more admin. A deploy token for one account can reach every site in it, so a single account needs tokens scoped to each site's own resources (Phase 8). Either way, real client sites need **Workers Paid** (about $5/month per account): the free plan's ~10 ms CPU per request and 100,000 requests/day across the account won't carry server-rendered client sites. Decide before the Phase 8 new-site script.
 
 ---
@@ -909,6 +911,8 @@ Still unchecked in the browser, for when entries return: replacing an image; add
 ## 17. Change Log
 
 Newest first. Each entry: date, what changed, how, and any follow-ups.
+
+- **2026-11-25 · Phase 5: core scope · Claude** — Docs only. Reframed from "which sections and records ship with every site" to "which platform features ship": the platform ships features, not content, and each site declares its own sections, records, content types, forms and settings. Signed off one by one: field types (incl. fixed vs Studio-editable option lists; structure stays in code), content types, records (only name, fields, title field, ordering), repeating items in sections, forms (fields in code; a form builder to discuss later), redirects (admins and editors, ask-first on address changes, not-found log, wildcards), Global settings (renamed, tabs, logo/favicon and announcement banner, draft + Publish throughout). Later list (Phases 8–9) and not-in-platform list agreed; multilingual out of v1. Open decisions 2, 3, 6 and 7 closed. Phase 6 rewritten to build the seven features; Phases 8 and 9 extended. Two stale Made entries corrected (rendering uses version keys, not purges; access middleware names).
 
 - **2026-11-25 · Edge cache keyed by build · Claude** — Fix: after the Studio restyle deployed, staging kept serving cached pages from the previous build, whose CSS and JS files the deploy had removed (`/assets/styles-….css` → 404), because pages were keyed only by path and content version. Pages are now also keyed by a build id (`__BUILD_ID__` via Vite `define`: `GITHUB_SHA` in CI, a fresh value for local builds); `x-edge-cache` shows `HIT|MISS <build> <version>`. Test added (96 tests). Checked on a local Worker with two builds sharing one cache: the second build missed, rendered fresh, then hit.
 
