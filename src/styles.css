@@ -1,6 +1,9 @@
 @import "tailwindcss" source(none);
 @source "../src";
 @import "tw-animate-css";
+/* Inter (variable), self-hosted: the Content Studio's typeface. Declared globally, downloaded only
+   by pages that use it (Studio screens), so visitors never fetch it. */
+@import "@fontsource-variable/inter";
 /* The site's own theme (src/site/theme.css): its public styles and any token overrides. Platform
    tokens below sit in @layer base, so a site overrides them by redeclaring them in its theme. */
 @import "./site/theme.css";
@@ -85,8 +88,6 @@
     --type-h1: clamp(2.5rem, 6vw, 4.5rem);
     --type-h2: clamp(1.6rem, 3vw, 2.25rem);
     --type-lead: clamp(1.15rem, 2vw, 1.4rem);
-    /* Studio: shadow under the canvas's section bar. */
-    --nav-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
   }
 
   * { border-color: var(--color-border); }
@@ -105,13 +106,33 @@
 }
 
 /* ---- Content Studio: editor shell, panel and canvas ---- */
-.site-studio { min-height: 100vh; display: flex; flex-direction: column; background: var(--background); }
-.studio-bar { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; padding: .75rem 1.25rem; border-bottom: 1px solid var(--border); background: var(--background); }
-.studio-notice { margin: 0; padding: .75rem 1.25rem; font-size: .9rem; background: var(--muted); border-bottom: 1px solid var(--border); }
-.studio-body-wrap { flex: 1; display: flex; min-height: 0; }
-.studio-canvas { flex: 1; min-width: 0; background: var(--surface-dark); overflow: auto; }
-.studio-frame { margin: 0 auto; transition: max-width .3s ease; container-type: inline-size; }
-.studio-panel { width: 320px; flex-shrink: 0; border-left: 1px solid var(--border); padding: 1.25rem; overflow: auto; max-height: calc(100vh - 57px); position: sticky; top: 57px; }
+/* Editor (design.md → Editor shell): a 52px top bar on the canvas, the client's page on a white
+   card ("editor sheet") and the side panel as a second card beside it. */
+.site-studio { min-height: 100vh; display: flex; flex-direction: column; background: var(--st-canvas, #f1f0ed); }
+.studio-bar {
+  position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  min-height: var(--st-bar, 52px); padding: 8px 12px; background: var(--st-canvas, #f1f0ed);
+}
+.studio-bar-title { flex-basis: 14rem; }
+/* Narrow screens: the side panel goes under the sheet instead of squeezing it. */
+@media (max-width: 767px) {
+  .studio-body-wrap { flex-direction: column; }
+  .studio-frame { height: 70vh; }
+  .studio-panel { width: auto; position: static; max-height: none; }
+}
+.studio-notice { margin: 0 12px 12px; padding: 10px 16px; font-size: 13px; border: 1px solid var(--st-edited-soft, #fbf1de); border-radius: 12px; background: var(--st-edited-soft, #fbf1de); color: var(--st-edited-text, #8a5300); }
+.studio-body-wrap { flex: 1; display: flex; gap: 12px; min-height: 0; padding: 0 12px 12px; }
+.studio-canvas { flex: 1; min-width: 0; }
+.studio-frame {
+  margin: 0 auto; height: calc(100vh - var(--st-bar, 52px) - 12px); overflow: hidden;
+  border: 1px solid var(--st-line, #e4e2dd); border-radius: 12px; background: #fff;
+  transition: max-width var(--st-dur-slow, 240ms) var(--st-ease, ease); container-type: inline-size;
+}
+.studio-panel {
+  width: 340px; flex-shrink: 0; padding: 20px; overflow: auto; position: sticky; top: var(--st-bar, 52px);
+  max-height: calc(100vh - var(--st-bar, 52px) - 12px);
+  border: 1px solid var(--st-line); border-radius: 12px; background: var(--st-card);
+}
 .studio-input { display: block; width: 100%; resize: none; overflow: hidden; background: transparent; border: 0; padding: 0; margin: 0; font: inherit; color: inherit; line-height: inherit; letter-spacing: inherit; }
 .studio-input:focus { outline: none; }
 .studio-input::placeholder { color: currentColor; opacity: .4; }
@@ -133,20 +154,21 @@
 .studio-menu button { padding: .35rem .7rem; border-radius: 4px; }
 .studio-menu button:hover, .studio-menu button:focus-visible { background: var(--primary); }
 .studio-placeholder { display: flex; align-items: center; justify-content: center; min-height: 12rem; height: 100%; border: 1px dashed color-mix(in srgb, currentColor 35%, transparent); font-size: 1rem; opacity: .8; }
-.studio-drop { display: inline-flex; cursor: pointer; padding: .5rem .9rem; border-radius: 6px; background: var(--primary); color: var(--primary-foreground); font-size: .9rem; }
+.studio-drop { display: inline-flex; align-items: center; height: 36px; cursor: pointer; padding: 0 14px; border-radius: 8px; background: #22211f; color: #fff; font: 500 14px/1 "Inter Variable", "Inter", system-ui, sans-serif; }
 .studio-drop:focus-within { outline: 2px solid var(--ring); outline-offset: 2px; }
 .studio-static { pointer-events: none; }
 
 /* Content Studio canvas: in-place editable page text */
-/* Studio canvas selection colours: green for sections, light blue for elements inside them
-   (editable text, images, menu items). Dashed on hover, solid when selected. */
-.studio-live { --studio-section: #22c55e; --studio-inner: #38bdf8; --studio-comment: #c084fc; }
+/* Studio canvas selection colours (design.md → Editor selection): blue for sections, cyan-blue for
+   elements inside them (editable text, images, menu items), purple for comments. Dashed on hover,
+   solid when selected. Tokens, so a site can override them. */
+.studio-live { --studio-section: #2f64d6; --studio-inner: #3aa0c8; --studio-comment: #7b5ad6; }
 .studio-live [data-cms] { outline: 1px dashed transparent; outline-offset: 6px; border-radius: 2px; cursor: text; transition: outline-color .15s; }
 .studio-live [data-cms]:hover { outline-color: var(--studio-inner); }
 .studio-live [data-cms]:focus { outline: 2px solid var(--studio-inner); }
 .studio-live [data-cms-image] { cursor: pointer; outline: 1px dashed transparent; outline-offset: 4px; }
 .studio-live [data-cms-image]:hover { outline-color: var(--studio-inner); }
-.studio-iframe { display: block; width: 100%; height: 100%; border: 0; background: var(--surface-dark); }
+.studio-iframe { display: block; width: 100%; height: 100%; border: 0; background: #fff; }
 
 /* Items (menu links and columns) are outlined just outside their edge, so small ones never
    collapse. Items that fill their whole section (data-cms-fill) are outlined inside their edge
@@ -166,38 +188,172 @@
 /* Empty CMS text: hidden on the live site, shown here as a faint placeholder so it can be filled. */
 .studio-live [data-cms]:empty::before { content: "Empty — hidden on the site"; opacity: .4; font-style: italic; pointer-events: none; }
 
-/* Content Studio dark theme. Applies only while an admin screen (.studio) is mounted, so the
-   public site — including the page rendered inside the editor canvas iframe — keeps its own look.
-   Set on :root (not the wrapper) so portalled UI such as toasts picks up the same tokens.
-   Neutral greys; the brand orange stays as the primary/accent colour. */
+/* Content Studio theme, "Panelled" (design.md). Applies only while an admin screen (.studio) is
+   mounted, so the public site, including the page inside the editor sheet, keeps its own look. Set on
+   :root (not the wrapper) so portalled UI (dialogs, menus, toasts) picks up the same tokens.
+   Principles: white cards on a warm grey canvas; quiet chrome directly on the canvas; one filled
+   primary button per screen; status always as a dot plus a word; roomy forms; calm motion. */
 :root:has(.studio) {
-  color-scheme: dark;
-  --background: oklch(0.155 0 0);
-  --foreground: oklch(0.95 0 0);
-  --card: oklch(0.19 0 0);
-  --card-foreground: oklch(0.95 0 0);
-  --popover: oklch(0.21 0 0);
-  --popover-foreground: oklch(0.95 0 0);
-  --secondary: oklch(0.24 0 0);
-  --secondary-foreground: oklch(0.95 0 0);
-  --muted: oklch(0.22 0 0);
-  --muted-foreground: oklch(0.68 0 0);
-  --accent: oklch(0.26 0 0);
-  --accent-foreground: oklch(0.95 0 0);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 16%);
-  --surface-dark: oklch(0.12 0 0);
+  color-scheme: light;
+  /* Neutrals */
+  --st-canvas: #f1f0ed;
+  --st-card: #ffffff;
+  --st-card-inset: #f8f7f5;
+  --st-line: #e4e2dd;
+  --st-line-strong: #d6d3cc;
+  --st-hover: rgba(34, 33, 31, 0.05);
+  --st-selected: rgba(34, 33, 31, 0.08);
+  --st-text: #22211f;
+  --st-text-2: #6b6964;
+  --st-text-3: #8a8882; /* placeholders, disabled labels and large hints only */
+  /* Action and accent */
+  --st-primary: #22211f;
+  --st-primary-hover: #3a3935;
+  --st-accent: #2f64d6;
+  --st-accent-soft: rgba(47, 100, 214, 0.12);
+  /* Status: dot, text, soft fill */
+  --st-live: #2e7d4f; --st-live-soft: #e7f2eb;
+  --st-edited: #c27a0e; --st-edited-text: #8a5300; --st-edited-soft: #fbf1de;
+  --st-draft: #a29f98; --st-draft-soft: #efeeea;
+  --st-danger: #b3261e; --st-danger-soft: #fbe9e7;
+  --st-comment: #7b5ad6; --st-comment-text: #5b3fb3; --st-comment-soft: #efeafc;
+  /* Shape, depth, motion */
+  --st-shadow-pop: 0 8px 24px rgba(34, 33, 31, 0.12), 0 2px 6px rgba(34, 33, 31, 0.06);
+  --st-shadow-dialog: 0 24px 64px rgba(34, 33, 31, 0.18);
+  --st-dur-fast: 120ms; --st-dur-base: 180ms; --st-dur-slow: 240ms;
+  --st-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --st-font: "Inter Variable", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --st-bar: 52px; /* editor top bar */
+  /* The shared tokens (Tailwind colour utilities), mapped onto the palette */
+  --background: var(--st-canvas);
+  --foreground: var(--st-text);
+  --card: var(--st-card);
+  --card-foreground: var(--st-text);
+  --popover: var(--st-card);
+  --popover-foreground: var(--st-text);
+  --primary: var(--st-primary);
+  --primary-foreground: #ffffff;
+  --secondary: var(--st-card-inset);
+  --secondary-foreground: var(--st-text);
+  --muted: var(--st-card-inset);
+  --muted-foreground: var(--st-text-2);
+  --accent: var(--st-hover); /* the shared "accent" is the hover fill */
+  --accent-foreground: var(--st-text);
+  --destructive: var(--st-danger);
+  --destructive-foreground: #ffffff;
+  --border: var(--st-line);
+  --input: var(--st-line-strong);
+  --ring: var(--st-accent);
+  --radius: 0.5rem;
+  --weight-text: 400;
 }
-:root:has(.studio) body { background: var(--background); }
+:root:has(.studio) body {
+  background: var(--st-canvas);
+  color: var(--st-text);
+  font-family: var(--st-font);
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.006em;
+  font-variant-numeric: tabular-nums;
+}
+/* The project's type scale is set for the public site (text-sm = 16px); the Studio uses design.md's. */
+:root:has(.studio) :is(.text-sm, .text-base) { font-size: 14px; line-height: 20px; }
+:root:has(.studio) .text-xs { font-size: 12px; line-height: 16px; }
+:root:has(.studio) :is(h1, h2, h3, h4) { font-family: var(--st-font); letter-spacing: -0.011em; }
+:root:has(.studio) h1 { font-size: 20px; line-height: 28px; font-weight: 600; }
+:root:has(.studio) :focus-visible { outline: 2px solid var(--st-accent); outline-offset: 2px; }
+/* Fields show focus as an accent border and a soft halo. */
+:root:has(.studio) :is(input, textarea, select):focus-visible { outline: none; border-color: var(--st-accent); box-shadow: 0 0 0 3px var(--st-accent-soft); }
+:root:has(.studio) ::selection { background: var(--st-accent-soft); color: var(--st-text); }
+:root:has(.studio) ::placeholder { color: var(--st-text-3); }
+.studio { background: var(--st-canvas); }
+
+/* Type helpers */
+.studio-caption { font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0.02em; text-transform: uppercase; color: var(--st-text-3); }
+.studio-section-title { font-size: 15px; line-height: 22px; font-weight: 500; color: var(--st-text); }
+.studio-help { font-size: 13px; line-height: 18px; color: var(--st-text-2); }
+.studio-display { font-size: 28px; line-height: 34px; font-weight: 600; letter-spacing: -0.02em; }
+.studio-wordmark { font-family: var(--st-font); font-size: 14px; font-weight: 500; letter-spacing: -0.006em; }
+.studio-wordmark .text-primary { color: var(--st-text-3); }
+/* A form field's own label: 13/500 above the field. */
+.studio-field > span:first-child { display: block; }
+.studio-field > span:first-child, .studio-field-label { font-size: 13px; line-height: 18px; font-weight: 500; color: var(--st-text); }
+span.studio-field-label:not(.flex) { display: block; }
+
+/* App shell: sidebar on the canvas, the screen's content on one white card. */
+.studio-sidebar { position: sticky; top: 0; align-self: start; padding: 12px; }
+@media (min-width: 768px) { .studio-sidebar { height: 100vh; overflow: auto; } }
+.studio-site { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 8px; }
+.studio-group { margin-top: 16px; }
+.studio-group > .studio-caption { display: block; padding: 0 8px; margin-bottom: 4px; }
+.studio-nav-link {
+  display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 8px; border: 1px solid transparent; border-radius: 6px;
+  font-size: 14px; color: var(--st-text); transition: background-color var(--st-dur-fast) var(--st-ease);
+}
+.studio-nav-link svg { width: 16px; height: 16px; stroke-width: 1.75; color: var(--st-text-2); flex: none; }
+.studio-nav-link:hover { background: var(--st-hover); }
+.studio-nav-link[data-status="active"] { background: var(--st-card); border-color: var(--st-line); font-weight: 500; }
+.studio-nav-link[data-status="active"] svg { color: var(--st-text); }
+.studio-nav-link .studio-count { margin-left: auto; }
+.studio-main { padding: 16px 16px 16px 4px; }
+@media (max-width: 767px) { .studio-main { padding: 0 12px 12px; } }
+.studio-card {
+  min-height: calc(100vh - 32px); padding: 24px; border: 1px solid var(--st-line); border-radius: 12px; background: var(--st-card);
+}
+@media (max-width: 1199px) { .studio-card { padding: 20px; } }
+@media (max-width: 767px) { .studio-card { min-height: 0; } }
+
+/* List rows (pages, users …): 48px, edge to edge inside the card, divided by --line. */
+.studio-rows { border-top: 1px solid var(--st-line); }
+.studio-row {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px; min-height: 48px; padding: 6px 0;
+  border-bottom: 1px solid var(--st-line); transition: background-color var(--st-dur-fast) var(--st-ease);
+}
+.studio-row:hover { background: linear-gradient(var(--st-hover), var(--st-hover)); }
+.studio-row-title { font-size: 14px; font-weight: 500; }
+.studio-row-meta { font-size: 13px; color: var(--st-text-2); }
+/* Row actions: ghost buttons that appear on hover, always reachable by keyboard. */
+@media (hover: hover) and (pointer: fine) {
+  .studio-row-actions { opacity: 0; transition: opacity var(--st-dur-fast) var(--st-ease); }
+  .studio-row:hover .studio-row-actions, .studio-row:focus-within .studio-row-actions { opacity: 1; }
+}
+
+/* Status: a dot plus a word (draft = hollow ring). */
+.studio-dot { display: inline-block; width: 7px; height: 7px; border-radius: 999px; flex: none; background: currentColor; }
+.studio-status { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; font-size: 13px; line-height: 18px; }
+.studio-status[data-tone="live"] { color: var(--st-live); }
+.studio-status[data-tone="changes"] { color: var(--st-edited-text); }
+.studio-status[data-tone="changes"] .studio-dot { background: var(--st-edited); }
+.studio-status[data-tone="draft"] { color: var(--st-text-2); }
+.studio-status[data-tone="draft"] .studio-dot { background: transparent; box-shadow: inset 0 0 0 1.5px var(--st-draft); }
+
+/* Segmented control: inset track, the selected segment a white lift. */
+.studio-seg { display: inline-flex; height: 32px; padding: 3px; gap: 2px; border-radius: 8px; background: var(--st-card-inset); border: 1px solid var(--st-line); }
+.studio-seg button {
+  display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; border: 1px solid transparent; border-radius: 6px;
+  font-size: 13px; font-weight: 500; color: var(--st-text-2); transition: background-color var(--st-dur-fast) var(--st-ease), color var(--st-dur-fast) var(--st-ease);
+}
+.studio-seg button svg { width: 16px; height: 16px; stroke-width: 1.75; }
+.studio-seg button:hover { color: var(--st-text); }
+.studio-seg button[aria-pressed="true"] { background: var(--st-card); border-color: var(--st-line); color: var(--st-text); }
+@media (max-width: 720px) { .studio-seg button span { display: none; } }
+
+/* Sign-in and other single cards on the canvas. */
+.studio-sheet { padding: 32px; border: 1px solid var(--st-line); border-radius: 12px; background: var(--st-card); }
+@media (max-width: 480px) { .studio-sheet { padding: 24px; } }
+
+@media (prefers-reduced-motion: reduce) {
+  :root:has(.studio) * { transition-property: opacity, background-color, color, border-color !important; }
+}
 
 /* Studio: page sections */
 .studio-live [data-cms-section] { outline: 1px dashed transparent; outline-offset: -6px; transition: outline-color .15s; }
 .studio-live [data-cms-section]:hover { outline-color: var(--studio-section); }
 .studio-live [data-cms-section][data-selected] { outline: 2px solid var(--studio-section); }
-.studio-section-bar { position: fixed; z-index: 2147483000; transform: translateX(-50%); display: flex; gap: 4px; padding: 4px; border-radius: 10px; background: var(--primary); box-shadow: var(--nav-shadow); }
+.studio-section-bar { position: fixed; z-index: 2147483000; transform: translateX(-50%); display: flex; gap: 2px; padding: 3px; border-radius: 8px; background: #22211f; box-shadow: 0 8px 24px rgba(34, 33, 31, .12), 0 2px 6px rgba(34, 33, 31, .06); font-family: "Inter Variable", "Inter", system-ui, sans-serif; }
 .studio-section-bar[hidden] { display: none; }
-.studio-section-bar button { width: 32px; height: 28px; border-radius: 6px; color: var(--primary-foreground); font-size: 1rem; }
-.studio-section-bar button:hover:not(:disabled) { background: color-mix(in srgb, var(--primary-foreground) 20%, transparent); }
+.studio-section-bar button { width: 32px; height: 28px; border-radius: 6px; color: #fff; font-size: 14px; transition: background-color 120ms cubic-bezier(.2, .8, .2, 1); }
+.studio-section-bar button:hover:not(:disabled) { background: rgba(255, 255, 255, 0.14); }
 .studio-section-bar button:disabled { opacity: .4; cursor: default; }
 
 /* ---- Feedback comments (Content Studio) ---- */
@@ -211,40 +367,42 @@
 .studio-commenting .studio-section-bar { display: none; }
 .studio-pins { position: fixed; inset: 0; pointer-events: none; z-index: 2147483000; }
 .studio-pin {
-  position: fixed; pointer-events: auto; width: 28px; height: 28px; border-radius: 999px 999px 999px 4px;
-  background: var(--studio-comment); color: #1a0b2e; font: 600 13px/28px system-ui, sans-serif; text-align: center;
-  border: 2px solid #fff; box-shadow: 0 2px 8px rgb(0 0 0 / .35); cursor: pointer !important; transition: transform .12s;
+  position: fixed; pointer-events: auto; width: 22px; height: 22px; border-radius: 999px;
+  background: var(--studio-comment); color: #fff; font: 600 11px/18px "Inter Variable", "Inter", system-ui, sans-serif; text-align: center;
+  font-variant-numeric: tabular-nums; border: 2px solid #fff; box-shadow: 0 2px 6px rgba(34, 33, 31, .18); cursor: pointer !important; transition: transform 120ms cubic-bezier(.2, .8, .2, 1);
 }
 /* Pinned to something closed (accordion, card back): hollow, on the nearest visible part. */
-.studio-pin[data-hidden="true"] { background: rgb(26 11 46 / .75); color: #e9d5ff; border-style: dashed; border-color: var(--studio-comment); }
+.studio-pin[data-hidden="true"] { background: #fff; color: #5b3fb3; border-style: dashed; border-color: var(--studio-comment); }
 /* Alt/Option held: the page works as normal, so drop the comment cursor and outline. */
 .studio-commenting.studio-alt * { cursor: auto !important; }
 .studio-commenting.studio-alt [data-comment-hover] { outline-color: transparent !important; }
-.studio-pin:hover, .studio-pin[data-active="true"] { transform: scale(1.18); background: #fff; color: #6b21a8; border-color: var(--studio-comment); }
+.studio-pin:hover, .studio-pin[data-active="true"] { transform: scale(1.15); background: #fff; color: #5b3fb3; border-color: var(--studio-comment); }
 /* Admin screens */
 .studio-count {
-  display: inline-flex; min-width: 1.25rem; height: 1.25rem; padding: 0 .35rem; margin-left: .35rem; align-items: center; justify-content: center;
-  border-radius: 999px; background: #c084fc; color: #1a0b2e; font-size: .7rem; font-weight: 600; line-height: 1;
+  display: inline-flex; min-width: 18px; height: 18px; padding: 0 6px; margin-left: 6px; align-items: center; justify-content: center;
+  border-radius: 999px; background: var(--st-text, #22211f); color: #fff; font-size: 12px; font-weight: 500; line-height: 1; font-variant-numeric: tabular-nums;
 }
 .site-comment-number {
   display: inline-flex; flex: none; width: 1.5rem; height: 1.5rem; align-items: center; justify-content: center;
-  border-radius: 999px 999px 999px 3px; background: #c084fc; color: #1a0b2e; font-size: .75rem; font-weight: 600;
+  border-radius: 999px; background: var(--st-comment, #7b5ad6); color: #fff; font-size: 12px; font-weight: 500;
 }
 .site-comment-device { border: 1px solid currentColor; border-radius: 999px; padding: 0 .4rem; font-size: .65rem; text-transform: uppercase; letter-spacing: .08em; }
-.site-comment-mode-on { background: #c084fc !important; color: #1a0b2e !important; }
+.site-comment-mode-on { background: var(--st-comment-soft) !important; color: var(--st-comment-text) !important; }
+/* Attention count for feedback (comments): purple. */
+.studio-count-comment { background: var(--st-comment, #7b5ad6); }
 
-/* Page switcher (editor top bar): orange = unpublished changes, purple = unresolved comments. */
+/* Page switcher (editor top bar): amber = unpublished changes, purple = open comments. */
 .site-switch-trigger { display: inline-flex; align-items: center; max-width: 100%; }
-.site-switch-dot { display: inline-block; width: .5rem; height: .5rem; border-radius: 999px; vertical-align: middle; flex: none; }
-.site-switch-dot[data-kind="unpublished"] { background: var(--primary); }
-.site-switch-dot[data-kind="comments"] { background: #c084fc; }
+.site-switch-dot { display: inline-block; width: 7px; height: 7px; border-radius: 999px; vertical-align: middle; flex: none; }
+.site-switch-dot[data-kind="unpublished"] { background: var(--st-edited); }
+.site-switch-dot[data-kind="comments"] { background: var(--st-comment); }
 
 /* Page settings: Google-style search preview (admin side panel). */
-.site-seo-preview { display: grid; gap: .2rem; padding: .85rem 1rem; border: 1px solid var(--border); border-radius: .5rem; background: color-mix(in srgb, var(--foreground) 4%, transparent); font-family: Arial, Helvetica, sans-serif; }
+.site-seo-preview { display: grid; gap: .2rem; padding: .85rem 1rem; border: 1px solid var(--border); border-radius: 8px; background: #fff; font-family: Arial, Helvetica, sans-serif; }
 .site-seo-preview-url { font-size: .75rem; color: var(--muted-foreground); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.site-seo-preview-title { font-size: 1.05rem; line-height: 1.3; color: #8ab4f8; }
+.site-seo-preview-title { font-size: 1.05rem; line-height: 1.3; color: #1a0dab; }
 .site-seo-preview-desc { font-size: .8rem; line-height: 1.45; color: var(--muted-foreground); }
-.site-seo-preview-hidden { justify-self: start; margin-top: .3rem; padding: .1rem .5rem; border: 1px solid currentColor; border-radius: 999px; font-size: .65rem; letter-spacing: .06em; text-transform: uppercase; color: #fbbf24; }
+.site-seo-preview-hidden { justify-self: start; margin-top: .3rem; padding: .1rem .5rem; border: 1px solid currentColor; border-radius: 999px; font-size: .65rem; letter-spacing: .06em; text-transform: uppercase; color: var(--st-edited-text, #8a5300); }
 .site-seo-more > summary { list-style: none; }
 .site-seo-more > summary::before { content: "▸ "; }
 .site-seo-more[open] > summary::before { content: "▾ "; }

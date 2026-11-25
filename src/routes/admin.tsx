@@ -1,5 +1,14 @@
 import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
-import { Button } from "@/components/ui/button";
+import {
+  CircleUser,
+  ExternalLink,
+  Image,
+  LayoutTemplate,
+  LogOut,
+  MessageSquare,
+  Settings,
+  Users,
+} from "lucide-react";
 import { Logo } from "@/components/SiteChrome";
 import { AdminGate } from "@/components/admin/AdminGate";
 import { adminHead, isAdmin, useAdminUser, useSignOut } from "@/components/admin/adminUser";
@@ -12,15 +21,18 @@ export const Route = createFileRoute("/admin")({
 });
 
 const GROUPS = [
-  { label: "Feedback", items: [{ to: "/admin/feedback", label: "Feedback" }] },
-  { label: "Pages", items: [{ to: "/admin/pages", label: "Pages" }] },
-  { label: "Library", items: [{ to: "/admin/media", label: "Media" }] },
+  {
+    label: "Feedback",
+    items: [{ to: "/admin/feedback", label: "Feedback", icon: MessageSquare }],
+  },
+  { label: "Pages", items: [{ to: "/admin/pages", label: "Pages", icon: LayoutTemplate }] },
+  { label: "Library", items: [{ to: "/admin/media", label: "Media", icon: Image }] },
   {
     label: "Settings",
     items: [
-      { to: "/admin/settings", label: "Site settings" },
-      { to: "/admin/users", label: "Users", adminOnly: true },
-      { to: "/admin/account", label: "Your account" },
+      { to: "/admin/settings", label: "Site settings", icon: Settings },
+      { to: "/admin/users", label: "Users", icon: Users, adminOnly: true },
+      { to: "/admin/account", label: "Your account", icon: CircleUser },
     ],
   },
 ] as const;
@@ -34,7 +46,7 @@ function Count({ to }: { to: string }) {
 function ForYou() {
   const n = useComments().forMe;
   return n ? (
-    <span className="studio-count" aria-label={`${n} for you`}>
+    <span className="studio-count studio-count-comment" aria-label={`${n} for you`}>
       {n}
     </span>
   ) : null;
@@ -51,33 +63,32 @@ function Waiting() {
 function AdminLayout() {
   return (
     <AdminGate>
-      <div className="grid min-h-screen md:grid-cols-[232px_1fr]">
+      <div className="grid min-h-screen md:grid-cols-[240px_1fr]">
         <Sidebar />
-        <main className="min-w-0 p-6 md:p-10">
-          <Outlet />
+        <main className="studio-main min-w-0">
+          <div className="studio-card">
+            <Outlet />
+          </div>
         </main>
       </div>
     </AdminGate>
   );
 }
 
-/** The Studio sidebar. Users is shown to admins only (editors can't manage accounts). */
+/** The Studio sidebar, on the canvas. Users is shown to admins only (editors can't manage accounts). */
 function Sidebar() {
   const signOut = useSignOut();
   const me = useAdminUser();
   return (
-    <aside className="border-b border-border p-6 md:border-b-0 md:border-r">
-      <div className="mb-8 flex items-center gap-3">
-        <Logo />
-        <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Studio</span>
+    <aside className="studio-sidebar">
+      <div className="studio-site">
+        <Logo className="studio-wordmark" />
       </div>
-      <nav aria-label="Content Studio" className="space-y-6">
+      <nav aria-label="Content Studio">
         {GROUPS.map((g) => (
-          <div key={g.label}>
-            <p className="mb-2 text-xs uppercase tracking-[0.18em] text-muted-foreground">
-              {g.label}
-            </p>
-            <ul className="space-y-1">
+          <div key={g.label} className="studio-group">
+            <p className="studio-caption">{g.label}</p>
+            <ul className="space-y-px">
               {g.items
                 .filter((it) => !("adminOnly" in it && it.adminOnly) || isAdmin(me))
                 .map((it) => (
@@ -85,8 +96,9 @@ function Sidebar() {
                     <Link
                       to={it.to}
                       activeOptions={{ includeSearch: false }}
-                      className="flex items-center justify-between gap-2 rounded-sm px-3 py-1.5 text-sm hover:bg-accent data-[status=active]:bg-primary data-[status=active]:text-primary-foreground"
+                      className="studio-nav-link"
                     >
+                      <it.icon aria-hidden="true" />
                       {it.label}
                       <Count to={it.to} />
                     </Link>
@@ -96,14 +108,16 @@ function Sidebar() {
           </div>
         ))}
       </nav>
-      <div className="mt-10 space-y-2 text-sm">
-        <p className="text-xs text-muted-foreground">Signed in as {me.first_name || me.email}</p>
-        <Link to="/" className="block hover:text-primary">
+      <div className="studio-group border-t border-border pt-4">
+        <p className="studio-help mb-1 truncate px-2">Signed in as {me.first_name || me.email}</p>
+        <Link to="/" className="studio-nav-link">
+          <ExternalLink aria-hidden="true" />
           View site
         </Link>
-        <Button variant="outline" size="sm" onClick={signOut}>
+        <button type="button" onClick={signOut} className="studio-nav-link w-full">
+          <LogOut aria-hidden="true" />
           Sign out
-        </Button>
+        </button>
       </div>
     </aside>
   );

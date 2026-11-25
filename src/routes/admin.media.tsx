@@ -29,7 +29,7 @@ function MediaLibrary() {
   return (
     <div>
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-xl">Media</h1>
+        <h1>Media</h1>
         <Input
           type="file"
           accept="image/*,video/*"
@@ -56,7 +56,7 @@ function MediaLibrary() {
       <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
         {items.map((it) => (
           <li key={it.path} className="space-y-2">
-            <div className="aspect-square overflow-hidden rounded-sm bg-muted">
+            <div className="aspect-square overflow-hidden rounded-md bg-muted">
               {/\.(mp4|webm|mov)$/i.test(it.path) ? (
                 <video src={it.url} className="h-full w-full object-cover" muted />
               ) : isDocument(it.path) ? (

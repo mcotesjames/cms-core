@@ -87,7 +87,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [
-      // Satoshi from Fontshare's CDN (the only web font on the site).
+      // Satoshi from Fontshare's CDN (the public site's only web font; the Studio's Inter is
+      // self-hosted, see styles.css).
       { rel: "preconnect", href: "https://api.fontshare.com", crossOrigin: "anonymous" },
       { rel: "preconnect", href: "https://cdn.fontshare.com", crossOrigin: "anonymous" },
       {

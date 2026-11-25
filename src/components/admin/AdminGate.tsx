@@ -12,7 +12,7 @@ import { AdminUserContext, meQuery, useSignOut, type AdminUser } from "./adminUs
 
 type DevAccounts = NonNullable<Awaited<ReturnType<typeof getMe>>["devAccounts"]>;
 
-const FIELD = "space-y-1.5 text-sm";
+const FIELD = "studio-field space-y-1.5 text-sm";
 
 /**
  * Sign in or create an account (Better Auth, email + password). New accounts wait for an admin's
@@ -63,10 +63,10 @@ function SignIn({
 
   return (
     <div className="flex min-h-screen items-center justify-center px-6 py-12">
-      <div className="w-full max-w-sm space-y-8">
+      <div className="studio-sheet w-full max-w-md space-y-8">
         <form onSubmit={submit} className="space-y-4">
           <BrandLogo />
-          <h1 className="text-lg">
+          <h1 className="studio-display">
             {mode === "in" ? "Sign in to the Content Studio" : "Create an account"}
           </h1>
           {mode === "up" && (
@@ -145,7 +145,7 @@ function SignIn({
         </form>
         {devAccounts && devAccounts.length > 0 && (
           <section className="space-y-2 border-t border-border pt-6">
-            <h2 className="text-sm">Local development shortcuts</h2>
+            <h2 className="studio-section-title">Local development shortcuts</h2>
             <p className="text-xs text-muted-foreground">
               Seeded accounts without passwords. Only in <code>npm run dev</code>; never on a
               deployed site.
@@ -155,7 +155,7 @@ function SignIn({
                 <li key={a.id}>
                   <Button
                     variant="outline"
-                    className="h-auto w-full justify-between py-2"
+                    className="h-auto w-full justify-between py-2.5"
                     onClick={() => devSignInAs(a.id)}
                   >
                     <span className="text-left">
@@ -199,7 +199,7 @@ function NamePrompt({ onSaved }: { onSaved: (first: string, last: string) => voi
     <div className="flex min-h-screen items-center justify-center px-6">
       <form onSubmit={save} className="w-full max-w-sm space-y-4">
         <BrandLogo />
-        <h1 className="text-lg">What's your name?</h1>
+        <h1 className="studio-display">What's your name?</h1>
         <p className="text-sm text-muted-foreground">
           It's shown on feedback comments, so everyone knows who left them.
         </p>
@@ -229,10 +229,10 @@ function NamePrompt({ onSaved }: { onSaved: (first: string, last: string) => voi
 
 /** The site's wordmark on the sign-in screens (the text logo until a site's own comes from its configuration). */
 function BrandLogo() {
-  return <Logo className="block" />;
+  return <Logo className="studio-wordmark block" />;
 }
 
-/** Marks a Content Studio screen so the admin dark theme in styles.css applies (`:root:has(.studio)`). */
+/** Marks a Content Studio screen so the Studio theme in styles.css applies (`:root:has(.studio)`). */
 function AdminTheme({ children }: { children?: ReactNode }) {
   return <div className="studio min-h-screen">{children}</div>;
 }
@@ -273,7 +273,7 @@ function AdminAccess({ children }: { children: ReactNode }) {
   if (user.role === "pending")
     return (
       <Centered>
-        <h1 className="text-lg">Waiting for approval</h1>
+        <h1 className="studio-display">Waiting for approval</h1>
         <p className="text-muted-foreground">
           Your account ({user.email}) has been created. An admin needs to approve it in Settings →
           Users before you can use the Content Studio.

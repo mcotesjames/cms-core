@@ -136,12 +136,10 @@ function PageSettings() {
       <Link to="/admin/pages" className="text-sm text-muted-foreground hover:text-foreground">
         ← Pages
       </Link>
-      <div className="sticky top-0 z-10 -mx-2 mb-6 mt-2 flex flex-wrap items-center justify-between gap-3 bg-background px-2 py-3">
+      <div className="sticky top-0 z-10 -mx-2 mb-6 mt-2 flex flex-wrap items-center justify-between gap-3 bg-card px-2 py-3">
         <div className="flex min-w-0 items-center gap-3">
-          <h1 className="truncate text-xl">{page.title}</h1>
-          <Badge
-            variant={status === "Live" ? "default" : status === "Draft" ? "outline" : "secondary"}
-          >
+          <h1 className="truncate">{page.title}</h1>
+          <Badge variant={status === "Live" ? "live" : status === "Draft" ? "draft" : "changes"}>
             {status}
           </Badge>
         </div>
@@ -166,22 +164,17 @@ function PageSettings() {
         </div>
       </div>
 
-      <section className="mb-8 space-y-4 rounded-sm border border-border p-6">
-        <h2 className="text-lg">Page</h2>
+      <section className="mb-8 space-y-5 border-t border-border pt-6">
+        <h2 className="studio-section-title">Page</h2>
         <label className="block space-y-2">
-          <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-            Page name
-          </span>
+          <span className="studio-field-label">Page name</span>
           <Input value={title} onChange={(e) => setTitle(e.target.value)} />
           <span className="block text-xs text-muted-foreground">
             Used in the Studio, the page switcher and menu link options.
           </span>
         </label>
         <div className="space-y-2">
-          <label
-            htmlFor="page-address"
-            className="text-xs uppercase tracking-[0.18em] text-muted-foreground"
-          >
+          <label htmlFor="page-address" className="studio-field-label">
             Web address
           </label>
           <div className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -214,7 +207,7 @@ function PageSettings() {
         </div>
       </section>
 
-      <section className="space-y-4 rounded-sm border border-border p-6">
+      <section className="space-y-5 border-t border-border pt-6">
         <SeoPanel
           seo={preview}
           fields={seo}

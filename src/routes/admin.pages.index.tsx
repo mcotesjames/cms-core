@@ -3,6 +3,8 @@ import { fetchSiteRows } from "@/lib/admin-drafts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
+import { Copy, MoreHorizontal, Plus, Settings, Trash2 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { usePages } from "@/components/admin/usePages";
@@ -25,9 +27,9 @@ const rowsQuery = {
 };
 
 function status(p: PageInfo, hasDraft: boolean) {
-  if (!p.published) return { label: "Draft", variant: "outline" as const };
-  if (hasDraft) return { label: "Live · unpublished changes", variant: "secondary" as const };
-  return { label: "Live", variant: "default" as const };
+  if (!p.published) return { label: "Draft", variant: "draft" as const };
+  if (hasDraft) return { label: "Live · unpublished changes", variant: "changes" as const };
+  return { label: "Live", variant: "live" as const };
 }
 
 /** "Standard", or "Standard → Landing (unpublished)" when the draft switches template. */
@@ -39,6 +41,9 @@ function templateLabel(p: PageInfo, row: { content: unknown; draft: unknown } | 
     ? templateDef(live).label
     : `${templateDef(live).label} → ${templateDef(draft).label} (unpublished)`;
 }
+
+const MENU_ITEM =
+  "flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm hover:bg-accent [&_svg]:size-4 [&_svg]:stroke-[1.75] [&_svg]:text-muted-foreground";
 
 /**
  * Pages: Edit opens the visual editor, Settings the page's settings (name,
@@ -66,55 +71,81 @@ function PagesList() {
     if (await pages.remove(p.key)) toast.success("Page deleted");
   };
 
+  const edited = pages.all.filter((p) => rows[p.key]?.draft != null).length;
+  const summary = `${pages.all.length} ${pages.all.length === 1 ? "page" : "pages"}${edited ? ` · ${edited} with unpublished changes` : ""}`;
+
   return (
-    <div className="max-w-5xl">
-      <div className="mb-8 flex items-center justify-between gap-4">
-        <h1 className="text-xl">Pages</h1>
-        <Button onClick={() => setCreating(true)}>+ New page</Button>
+    <div className="max-w-[1080px]">
+      <div className="mb-4 flex items-start justify-between gap-4">
+        <div>
+          <h1>Pages</h1>
+          <p className="studio-help mt-0.5">{summary}</p>
+        </div>
+        <Button onClick={() => setCreating(true)}>
+          <Plus aria-hidden="true" />
+          New page
+        </Button>
       </div>
       <NewPageDialog open={creating} onOpenChange={setCreating} />
-      <ul className="divide-y divide-border rounded-sm border border-border">
+      <ul className="studio-rows">
         {pages.all.map((p) => {
           const s = status(p, rows[p.key]?.draft != null);
           return (
-            <li key={p.key} className="flex flex-wrap items-center gap-3 px-4 py-3">
+            <li key={p.key} className="studio-row relative">
+              {/* The whole row opens the editor; the … menu sits above the row link. */}
               <Link
                 to="/admin/pages/$key"
                 params={{ key: p.key }}
-                className="min-w-[10rem] flex-1 truncate hover:text-primary"
+                className="studio-row-title min-w-[8rem] flex-1 truncate after:absolute after:inset-0"
               >
                 {p.title}
               </Link>
-              <Badge variant="outline" className="font-normal text-muted-foreground">
+              <span className="studio-row-meta hidden w-44 truncate sm:inline">{p.path}</span>
+              <Badge variant="outline" className="hidden md:inline-flex">
                 {templateLabel(p, rows[p.key])}
               </Badge>
               <Badge variant={s.variant}>{s.label}</Badge>
-              <span className="w-40 truncate text-sm text-muted-foreground">{p.path}</span>
-              <Button size="sm" variant="ghost" asChild>
-                <Link to="/admin/pages/$key" params={{ key: p.key }}>
-                  Edit
-                </Link>
-              </Button>
-              <Button size="sm" variant="ghost" asChild>
-                <Link to="/admin/page-settings/$key" params={{ key: p.key }}>
-                  Settings
-                </Link>
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => duplicate(p)}>
-                Duplicate
-              </Button>
-              {p.custom ? (
-                <Button size="sm" variant="ghost" onClick={() => remove(p)}>
-                  Delete
-                </Button>
-              ) : (
-                <span className="w-[62px]" aria-hidden="true" />
-              )}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="relative z-10"
+                    aria-label={`More actions for ${p.title}`}
+                  >
+                    <MoreHorizontal aria-hidden="true" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-44 p-1">
+                  <Link
+                    to="/admin/page-settings/$key"
+                    params={{ key: p.key }}
+                    className={MENU_ITEM}
+                  >
+                    <Settings aria-hidden="true" />
+                    Settings
+                  </Link>
+                  <button type="button" className={MENU_ITEM} onClick={() => duplicate(p)}>
+                    <Copy aria-hidden="true" />
+                    Duplicate
+                  </button>
+                  {p.custom && (
+                    <button
+                      type="button"
+                      className={`${MENU_ITEM} text-destructive`}
+                      onClick={() => remove(p)}
+                    >
+                      <Trash2 aria-hidden="true" />
+                      Delete
+                    </button>
+                  )}
+                </PopoverContent>
+              </Popover>
             </li>
           );
         })}
       </ul>
-      <p className="mt-3 text-xs text-muted-foreground">
+      <p className="studio-help mt-3">
         The homepage keeps its web address and can't be deleted. Everything else works the same.
       </p>
     </div>

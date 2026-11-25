@@ -339,6 +339,7 @@ export function PageCanvas({
       title={page.title}
       status={unpublishedPage ? "Not published yet" : dirty ? "Unpublished changes" : "Live"}
       live={!dirty && !unpublishedPage}
+      tone={unpublishedPage ? "draft" : dirty ? "changes" : "live"}
       saving={saving}
       dirty={dirty}
       canDiscard={dirty}
@@ -485,7 +486,7 @@ export function PageCanvas({
                     <img
                       src={valueOf(f.field)}
                       alt=""
-                      className="max-h-40 rounded-sm object-cover"
+                      className="max-h-40 rounded-md object-cover"
                     />
                   )}
                   <Button

@@ -29,7 +29,7 @@ import { sectionDef } from "@/lib/page-sections";
 
 type Ctx = { site: Record<string, unknown> };
 
-const SELECT = "h-10 w-full rounded-md border border-input bg-background px-3 text-sm";
+const SELECT = "h-10 w-full rounded-lg border border-input bg-[var(--st-card-inset)] px-3 text-sm";
 const uid = () => crypto.randomUUID().slice(0, 8);
 
 /**
@@ -65,7 +65,7 @@ export function MenuPanel(p: {
           ← {backLabel}
         </Button>
       ) : (
-        <h2 className="text-base">
+        <h2 className="studio-section-title">
           {menuTitle} <span className="text-xs text-muted-foreground">(site-wide)</span>
         </h2>
       )}
@@ -92,7 +92,7 @@ export function MenuPanel(p: {
             <li key={l.id} className="flex items-center gap-1">
               <button
                 type="button"
-                className="block min-w-0 flex-1 truncate rounded-sm px-3 py-2 text-left text-sm hover:bg-accent"
+                className="block min-w-0 flex-1 truncate rounded-md px-3 py-2 text-left text-sm hover:bg-accent"
                 onClick={() => open(linkAddress(l.id), true)}
               >
                 {l.label || "Untitled"}
@@ -142,9 +142,9 @@ export function MenuPanel(p: {
           back={() => open(col ? columnAddress(col.id) : null)}
           backLabel={col ? col.heading || "Column" : menuTitle}
         />
-        <h2 className="text-base">{link.label || "Untitled"}</h2>
+        <h2 className="studio-section-title">{link.label || "Untitled"}</h2>
         {r.broken && (
-          <p className="rounded-sm border border-destructive/50 p-2 text-xs text-destructive">
+          <p className="rounded-md border border-destructive/50 p-2 text-xs text-destructive">
             Hidden on the site: {r.broken}
           </p>
         )}
@@ -276,7 +276,7 @@ export function MenuPanel(p: {
             onChange={(e) => setCol((c) => ({ ...c, heading: e.target.value }))}
           />
         </PanelField>
-        <h3 className="text-sm">Links</h3>
+        <h3 className="studio-section-title">Links</h3>
         <LinkRows
           links={column.links}
           onMove={(id, dir) => {
@@ -344,7 +344,7 @@ export function MenuPanel(p: {
           <li key={c.id} className="flex items-center gap-1">
             <button
               type="button"
-              className="block min-w-0 flex-1 truncate rounded-sm px-3 py-2 text-left text-sm hover:bg-accent"
+              className="block min-w-0 flex-1 truncate rounded-md px-3 py-2 text-left text-sm hover:bg-accent"
               onClick={() => open(columnAddress(c.id), true)}
             >
               {c.heading || "Untitled column"}{" "}

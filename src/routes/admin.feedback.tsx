@@ -44,7 +44,7 @@ function Feedback() {
   ];
   return (
     <div className="max-w-3xl space-y-6">
-      <h1 className="text-xl">Feedback</h1>
+      <h1>Feedback</h1>
       <p className="text-sm text-muted-foreground">
         Comments left on pages. To add one, open a page and press Comment in the top bar. Resolved
         comments are deleted after 30 days.
@@ -74,7 +74,7 @@ function Feedback() {
               : "No resolved comments in the last 30 days."}
         </p>
       ) : (
-        <ul className="divide-y divide-border rounded-sm border border-border">
+        <ul className="divide-y divide-border border-y border-border">
           {shown.map((t) => {
             const place = parsePlace(t.opened_on, { pages: pageNames });
             return (

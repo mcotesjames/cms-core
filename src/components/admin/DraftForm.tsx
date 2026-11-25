@@ -15,7 +15,7 @@ function ImageField({ value, onChange }: { value: string; onChange: (v: string) 
   const [busy, setBusy] = useState(false);
   return (
     <div className="space-y-2">
-      {value && <img src={value} alt="" className="h-28 w-auto rounded-sm object-cover" />}
+      {value && <img src={value} alt="" className="h-28 w-auto rounded-md object-cover" />}
       <Input
         type="file"
         accept="image/*"
@@ -50,7 +50,7 @@ export function PublishBar({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <Badge variant={hasDraft ? "secondary" : "default"}>
+      <Badge variant={hasDraft ? "changes" : "live"}>
         {hasDraft ? "Unpublished changes" : "Live"}
       </Badge>
       <span className="text-sm text-muted-foreground" aria-live="polite">
@@ -90,23 +90,21 @@ export function DraftForm({
   if (!doc) return <p className="text-muted-foreground">Loading…</p>;
   return (
     <div className="max-w-3xl">
-      <div className="sticky top-0 z-10 -mx-2 mb-8 flex flex-wrap items-center justify-between gap-4 bg-background px-2 py-3">
-        <h1 className="text-xl">{title}</h1>
+      <div className="sticky top-0 z-10 -mx-2 mb-8 flex flex-wrap items-center justify-between gap-4 bg-card px-2 py-3">
+        <h1>{title}</h1>
         <PublishBar hasDraft={hasDraft} save={save} onPublish={publish} onDiscard={discard} />
       </div>
       {extra?.(doc, update)}
       {sections.map((s) => (
-        <section key={s.title} className="mb-8 space-y-4 rounded-sm border border-border p-6">
-          <h2 className="text-lg">{s.title}</h2>
+        <section key={s.title} className="mb-8 space-y-5 border-t border-border pt-6">
+          <h2 className="studio-section-title">{s.title}</h2>
           {s.note && <p className="text-sm text-muted-foreground">{s.note}</p>}
           {s.fields.map((f) => {
             const v = String(getPath(doc, f.path) ?? "");
             const set = (nv: string) => update(setPath(doc, f.path, nv));
             return (
               <label key={f.path} className="block space-y-2">
-                <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                  {f.label}
-                </span>
+                <span className="studio-field-label">{f.label}</span>
                 {f.type === "textarea" ? (
                   <Textarea rows={4} value={v} onChange={(e) => set(e.target.value)} />
                 ) : f.type === "image" ? (

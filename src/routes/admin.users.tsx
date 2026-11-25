@@ -24,7 +24,7 @@ const ROLE_LABEL: Record<string, string> = {
   editor: "Editor",
   pending: "Waiting",
 };
-const SELECT = "h-8 rounded-md border border-input bg-background px-2 text-sm";
+const SELECT = "h-8 rounded-lg border border-input bg-[var(--st-card-inset)] px-2 text-sm";
 const MIN_PASSWORD = 10;
 
 /**
@@ -40,7 +40,7 @@ function Users() {
   if (!isAdmin(me))
     return (
       <div className="max-w-3xl space-y-3">
-        <h1 className="text-xl">Users</h1>
+        <h1>Users</h1>
         <p className="text-sm text-muted-foreground">Only admins can manage users.</p>
       </div>
     );
@@ -72,9 +72,9 @@ function Users() {
 
   return (
     <div className="max-w-3xl space-y-10">
-      <h1 className="text-xl">Users</h1>
+      <h1>Users</h1>
       <section className="space-y-3">
-        <h2 className="text-lg">
+        <h2 className="studio-section-title">
           Waiting for approval{" "}
           {pending.length > 0 && <Badge className="ml-2">{pending.length}</Badge>}
         </h2>
@@ -113,7 +113,7 @@ function Users() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg">Approved</h2>
+        <h2 className="studio-section-title">Approved</h2>
         <p className="text-sm text-muted-foreground">
           Editors can edit everything in the Content Studio except Users. Admins can also approve
           accounts, change roles and set passwords. Everyone approved can be picked as the person a
@@ -194,8 +194,8 @@ function SetPassword({
 }) {
   const [password, setPassword] = useState("");
   return (
-    <section className="max-w-md space-y-3 rounded-md border border-border p-4">
-      <h2 className="text-base">Set a temporary password for {profileName(who)}</h2>
+    <section className="max-w-md space-y-3 rounded-lg border border-border p-4">
+      <h2 className="studio-section-title">Set a temporary password for {profileName(who)}</h2>
       <p className="text-xs text-muted-foreground">
         They'll be signed out everywhere. Share the password privately; they can change it under
         Your account.

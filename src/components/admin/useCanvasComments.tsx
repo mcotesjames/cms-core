@@ -157,7 +157,7 @@ export function useCanvasComments({
             onBack={() => setOpenId(null)}
           />
           {pinInfo.hidden.includes(open.id) && (
-            <p className="rounded-sm border border-border p-2 text-xs text-muted-foreground">
+            <p className="rounded-md border border-border p-2 text-xs text-muted-foreground">
               This comment is on something that's closed right now (such as the mobile menu). Its
               pin is shown hollow nearby — Alt-click (Option-click on a Mac) to open it.
             </p>
@@ -181,7 +181,7 @@ export function useCanvasComments({
             Comment on {hereLabel}
           </Button>
           <section className="space-y-1">
-            <h3 className="text-sm">Open ({list.length})</h3>
+            <h3 className="studio-section-title">Open ({list.length})</h3>
             {list.length === 0 && (
               <p className="text-xs text-muted-foreground">No open comments here.</p>
             )}

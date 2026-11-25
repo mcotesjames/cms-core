@@ -46,7 +46,7 @@ function Label({
   children: ReactNode;
 }) {
   return (
-    <span className="flex items-baseline justify-between text-xs uppercase tracking-[0.16em] text-muted-foreground">
+    <span className="flex items-baseline justify-between studio-field-label">
       {htmlFor ? <label htmlFor={htmlFor}>{text}</label> : <span>{text}</span>}
       {children}
     </span>
@@ -88,7 +88,7 @@ export function SeoPanel({
   const url = seo.url.replace(/^https:\/\//, "").replace(/\/$/, "");
   return (
     <section className="space-y-4" aria-label="Search and sharing">
-      <h3 className="text-sm">Search &amp; sharing</h3>
+      <h3 className="studio-section-title">Search &amp; sharing</h3>
       <div className="site-seo-preview" aria-label="Search result preview">
         <span className="site-seo-preview-url">{url.replace("/", " › ")}</span>
         <span className="site-seo-preview-title">
@@ -141,9 +141,9 @@ export function SeoPanel({
           <Origin custom={seo.custom.image} onReset={() => set({ image: "" })} />
         </Label>
         {seo.image ? (
-          <img src={seo.image} alt="" className="aspect-[1.91/1] w-full rounded-sm object-cover" />
+          <img src={seo.image} alt="" className="aspect-[1.91/1] w-full rounded-md object-cover" />
         ) : (
-          <p className="rounded-sm border border-dashed border-border p-3 text-xs text-muted-foreground">
+          <p className="rounded-md border border-dashed border-border p-3 text-xs text-muted-foreground">
             No share image. Add one here, or a default for every page in Settings → SEO.
           </p>
         )}
@@ -217,9 +217,7 @@ export function ApplyField({
   const err = v !== value && problem ? problem(v) : null;
   return (
     <div className="space-y-1.5">
-      <span className="block text-xs uppercase tracking-[0.16em] text-muted-foreground">
-        {label}
-      </span>
+      <span className="block studio-field-label">{label}</span>
       <div className="flex items-center gap-2">
         {prefix && <span className="text-sm text-muted-foreground">{prefix}</span>}
         <Input value={v} aria-label={label} onChange={(e) => setV(e.target.value)} />

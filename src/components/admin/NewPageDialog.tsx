@@ -73,9 +73,7 @@ export function NewPageDialog({
             </DialogDescription>
           </DialogHeader>
           <fieldset className="space-y-1.5">
-            <legend className="mb-1.5 text-xs uppercase tracking-[0.16em] text-muted-foreground">
-              Template
-            </legend>
+            <legend className="mb-1.5 studio-field-label">Template</legend>
             <div role="radiogroup" className="grid grid-cols-2 gap-2">
               {TEMPLATE_ORDER.map((t) => (
                 <button
@@ -85,9 +83,9 @@ export function NewPageDialog({
                   aria-checked={template === t}
                   onClick={() => setTemplate(t)}
                   className={cn(
-                    "rounded-sm border p-3 text-left transition-colors",
+                    "rounded-md border p-3 text-left transition-colors",
                     template === t
-                      ? "border-primary bg-primary/10"
+                      ? "border-[var(--st-accent)] bg-[var(--st-accent-soft)]"
                       : "border-border hover:bg-accent",
                   )}
                 >
@@ -100,9 +98,7 @@ export function NewPageDialog({
             </div>
           </fieldset>
           <label className="block space-y-1.5">
-            <span className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-              Page name
-            </span>
+            <span className="studio-field-label">Page name</span>
             <Input
               autoFocus
               required
@@ -112,9 +108,7 @@ export function NewPageDialog({
             />
           </label>
           <label className="block space-y-1.5">
-            <span className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-              Web address
-            </span>
+            <span className="studio-field-label">Web address</span>
             <span className="flex items-center gap-1 text-sm text-muted-foreground">
               {SITE_HOST}/
               <Input

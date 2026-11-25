@@ -1,3 +1,4 @@
+import { ChevronDown } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { fetchSiteRows } from "@/lib/admin-drafts";
 import { useNavigate } from "@tanstack/react-router";
@@ -44,7 +45,7 @@ function Dots({ f }: { f: Flags | undefined }) {
 }
 
 const ROW =
-  "flex w-full items-center rounded-sm px-3 py-2 text-left text-sm hover:bg-accent focus-visible:bg-accent focus-visible:outline-none";
+  "flex w-full items-center rounded-md px-3 py-2 text-left text-sm hover:bg-accent focus-visible:bg-accent focus-visible:outline-none";
 
 /**
  * The page name in the editor's top bar, as a dropdown to jump to another page.
@@ -154,17 +155,15 @@ export function PageSwitcher({
         }}
       >
         <PopoverTrigger
-          className="site-switch-trigger min-w-0 truncate rounded-sm px-2 py-1 text-sm hover:bg-accent"
+          className="site-switch-trigger h-8 min-w-0 gap-1.5 truncate rounded-lg px-2 text-sm font-medium hover:bg-accent"
           aria-label={`${label} — switch page`}
         >
           <span className="truncate">{label}</span>
-          <span aria-hidden="true" className="ml-1.5 text-xs text-muted-foreground">
-            ▾
-          </span>
+          <ChevronDown aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
         </PopoverTrigger>
         <PopoverContent
           align="start"
-          className="w-96 p-2"
+          className="w-[360px] p-2"
           onOpenAutoFocus={(e) => {
             e.preventDefault();
             search.current?.focus();
@@ -196,9 +195,7 @@ export function PageSwitcher({
               </>
             ) : (
               <>
-                <p className="px-3 pb-1 pt-1 text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                  Pages
-                </p>
+                <p className="studio-caption px-3 pb-1 pt-1">Pages</p>
                 {pageList.map((p) => (
                   <PageRow key={p.key} k={p.key} title={p.title} draft={!p.published} />
                 ))}

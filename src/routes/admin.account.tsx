@@ -55,11 +55,11 @@ function Account() {
 
   return (
     <div className="max-w-md space-y-10">
-      <h1 className="text-xl">Your account</h1>
+      <h1>Your account</h1>
       <p className="text-sm text-muted-foreground">{me.email}</p>
 
       <form onSubmit={saveName} className="space-y-4">
-        <h2 className="text-lg">Name</h2>
+        <h2 className="studio-section-title">Name</h2>
         <p className="text-xs text-muted-foreground">Shown on your feedback comments.</p>
         <div className="grid grid-cols-2 gap-3">
           <label className={FIELD}>
@@ -81,7 +81,7 @@ function Account() {
       </form>
 
       <form onSubmit={changePassword} className="space-y-4">
-        <h2 className="text-lg">Password</h2>
+        <h2 className="studio-section-title">Password</h2>
         <label className={FIELD}>
           <span>Current password</span>
           <Input

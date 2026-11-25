@@ -1,11 +1,12 @@
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
+import { ArrowLeft, Eye, EyeOff, MessageSquare, Monitor, Smartphone, Tablet } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { PageSwitcher } from "./PageSwitcher";
 import type { SwitcherTarget } from "@/lib/page-switcher";
 
 const DEVICES = { desktop: "100%", tablet: "768px", mobile: "360px" } as const;
+const DEVICE_ICONS = { desktop: Monitor, tablet: Tablet, mobile: Smartphone } as const;
 
 /**
  * The one Content Studio editor layout: top bar (back, title, status, save state,
@@ -17,6 +18,8 @@ export function StudioShell(p: {
   title: string;
   status: string;
   live: boolean;
+  /** Status dot: live (green), unpublished changes (amber), never published (grey). */
+  tone?: "live" | "changes" | "draft";
   saving: boolean;
   dirty: boolean;
   canDiscard: boolean;
@@ -48,10 +51,13 @@ export function StudioShell(p: {
   return (
     <div className="site-studio" data-panel={p.panel}>
       <header className="studio-bar">
-        <Link to={p.back.to} className="text-sm hover:text-primary">
-          ← {p.back.label}
-        </Link>
-        <div className="flex min-w-0 flex-1">
+        <Button variant="ghost" size="sm" asChild>
+          <Link to={p.back.to}>
+            <ArrowLeft aria-hidden="true" />
+            {p.back.label}
+          </Link>
+        </Button>
+        <div className="studio-bar-title flex min-w-0 flex-1 items-center gap-3">
           {p.switcher ? (
             <PageSwitcher
               current={p.switcher}
@@ -60,35 +66,48 @@ export function StudioShell(p: {
               view={{ device, commenting: !!p.comments?.on }}
             />
           ) : (
-            <span className="truncate text-sm">{p.title}</span>
+            <span className="truncate px-2 text-sm font-medium">{p.title}</span>
           )}
+          <span className="studio-status" data-tone={p.tone ?? (p.live ? "live" : "changes")}>
+            <span className="studio-dot" aria-hidden="true" />
+            {p.status}
+          </span>
+          <span className="studio-help hidden sm:inline" aria-live="polite">
+            {p.saving ? "Saving…" : p.dirty ? "Draft saved" : ""}
+          </span>
         </div>
-        <Badge variant={p.live ? "default" : "secondary"}>{p.status}</Badge>
-        <span className="hidden text-xs text-muted-foreground sm:inline" aria-live="polite">
-          {p.saving ? "Saving…" : p.dirty ? "Draft saved" : ""}
-        </span>
-        {(Object.keys(DEVICES) as (keyof typeof DEVICES)[]).map((d) => (
-          <Button
-            key={d}
-            size="sm"
-            variant={device === d ? "default" : "ghost"}
-            aria-pressed={device === d}
-            onClick={() => setDevice(d)}
-          >
-            {d[0]!.toUpperCase() + d.slice(1)}
-          </Button>
-        ))}
+        <div className="studio-seg" role="group" aria-label="Preview size">
+          {(Object.keys(DEVICES) as (keyof typeof DEVICES)[]).map((d) => {
+            const Icon = DEVICE_ICONS[d];
+            return (
+              <button
+                key={d}
+                type="button"
+                aria-pressed={device === d}
+                aria-label={d[0]!.toUpperCase() + d.slice(1)}
+                onClick={() => setDevice(d)}
+              >
+                <Icon aria-hidden="true" />
+                <span>{d[0]!.toUpperCase() + d.slice(1)}</span>
+              </button>
+            );
+          })}
+        </div>
         {p.comments && (
           <Button
             size="sm"
-            variant={p.comments.on ? "default" : "ghost"}
+            variant="ghost"
             aria-pressed={p.comments.on}
             onClick={p.comments.toggle}
             className={p.comments.on ? "site-comment-mode-on" : undefined}
           >
+            <MessageSquare aria-hidden="true" />
             Comment
             {p.comments.forMe > 0 && (
-              <span className="studio-count" aria-label={`${p.comments.forMe} for you`}>
+              <span
+                className="studio-count studio-count-comment"
+                aria-label={`${p.comments.forMe} for you`}
+              >
                 {p.comments.forMe}
               </span>
             )}
@@ -100,11 +119,12 @@ export function StudioShell(p: {
           aria-pressed={!p.panel}
           onClick={() => p.setPanel(!p.panel)}
         >
+          {p.panel ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
           {p.panel ? "Hide panel" : "Show panel"}
         </Button>
         {p.extra}
         {p.canDiscard && (
-          <Button size="sm" variant="ghost" onClick={p.onDiscard}>
+          <Button size="sm" variant="secondary" onClick={p.onDiscard}>
             Discard
           </Button>
         )}
@@ -115,10 +135,7 @@ export function StudioShell(p: {
       {p.notice}
       <div className="studio-body-wrap">
         <div className="studio-canvas">
-          <div
-            className="studio-frame h-full"
-            style={{ maxWidth: DEVICES[device], height: "calc(100vh - 57px)" }}
-          >
+          <div className="studio-frame h-full" style={{ maxWidth: DEVICES[device] }}>
             <iframe
               ref={p.frameRef}
               title={`${p.title} canvas`}
@@ -147,8 +164,8 @@ export function StudioShell(p: {
 export function PanelHeading({ title, onDone }: { title: string; onDone: () => void }) {
   return (
     <div className="flex items-center justify-between">
-      <h2 className="text-base">{title}</h2>
-      <Button size="sm" variant="ghost" onClick={onDone}>
+      <h2 className="studio-section-title">{title}</h2>
+      <Button size="sm" variant="secondary" onClick={onDone}>
         Done
       </Button>
     </div>
@@ -158,7 +175,7 @@ export function PanelHeading({ title, onDone }: { title: string; onDone: () => v
 export function PanelField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block space-y-1.5">
-      <span className="text-xs uppercase tracking-[0.16em] text-muted-foreground">{label}</span>
+      <span className="studio-field-label">{label}</span>
       {children}
     </label>
   );

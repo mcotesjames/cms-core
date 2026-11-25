@@ -12,7 +12,7 @@ import {
   type Thread,
 } from "@/lib/comments";
 
-const SELECT = "h-10 w-full rounded-md border border-input bg-background px-3 text-sm";
+const SELECT = "h-10 w-full rounded-lg border border-input bg-[var(--st-card-inset)] px-3 text-sm";
 
 /** Required "For" picker: approved users, by name. */
 function ForSelect({
@@ -111,7 +111,7 @@ function Message({
 }) {
   const { byId } = useProfiles();
   return (
-    <div className="space-y-1 rounded-sm border border-border p-3">
+    <div className="space-y-1 rounded-md border border-border p-3">
       <p className="flex flex-wrap items-baseline gap-x-2 text-xs text-muted-foreground">
         <span className="text-sm text-foreground">{profileName(byId[c.author_id])}</span>
         <span>{timeAgo(c.created_at)}</span>
@@ -163,7 +163,7 @@ export function ThreadView({
         On <span className="text-foreground">{label}</span>
       </p>
       {removed && (
-        <p className="rounded-sm border border-border p-2 text-xs text-muted-foreground">
+        <p className="rounded-md border border-border p-2 text-xs text-muted-foreground">
           The element this was pinned to has been removed from the page.
         </p>
       )}
@@ -242,7 +242,7 @@ export function ThreadRow({
     <button
       type="button"
       onClick={onOpen}
-      className="flex w-full gap-3 rounded-sm px-3 py-2 text-left hover:bg-accent"
+      className="flex w-full gap-3 rounded-md px-3 py-2 text-left hover:bg-accent"
     >
       {n !== undefined && (
         <span className="site-comment-number" aria-hidden="true">

@@ -208,7 +208,7 @@ Every content type on every site is one of these kinds and inherits that kind's 
 - **The canvas is the real page**, rendered exactly as it is live, loaded in a frame with editable text and sections marked.
 - **Hover:** a block or section gets a dashed outline and a small **↑ / ↓ / +** bar at its bottom edge. **↑ / ↓** moves it one position; **+** inserts below it from the template's menu (section 6).
 - **Click to select:** solid outline; the side panel fills with all its CMS fields.
-- **Two selection levels, two colours:** sections (and entry blocks) in one colour, elements inside them (text, images, list items) in another. Dashed on hover, solid when selected; an inner element's outline sits inside its section's. Colours are tokens (site config `studio.selectionColours`; default green / light blue).
+- **Two selection levels, two colours:** sections (and entry blocks) in one colour, elements inside them (text, images, list items) in another. Dashed on hover, solid when selected; an inner element's outline sits inside its section's. Colours are tokens (`--studio-section` / `--studio-inner` / `--studio-comment` on `.studio-live`; default blue `#2f64d6` / cyan-blue `#3aa0c8` / purple `#7b5ad6`; site config `studio.selectionColours` later). The canvas's ↑/↓/+ bar is a small dark toolbar.
 - **Selection flash:** a quick fading flash in the selection colour on the most specific thing selected. Off for reduced motion. Drawn as a separate fixed overlay, never by styling the element.
 - **Outlines never collapse:** small elements are outlined just outside their edge; only items that fill their section are outlined inside.
 - **Clear selection:** **Done** or **Escape**. With nothing selected, the panel shows a short hint and a link to Settings.
@@ -286,8 +286,16 @@ Records are edited as a **list with a form drawer**, not on the canvas.
 - ☐ **Placeholder flag** with a badge in the list; a launch check lists any placeholders still live.
 
 ### Studio theme ✅
-- The whole Studio (sign-in, lists, forms, editor chrome) uses its **own neutral dark theme**, separate from the site.
-- The site's **brand colour is the accent** (site config `studio.accent`): primary buttons, active sidebar item, Live badge.
+- The whole Studio (sign-in, lists, forms, editor chrome) uses its **own "Panelled" theme** (`design.md` v1, 2026-11-25; reference products Kirby's Panel and Ghost's admin, nothing copied), defined as `--st-*` tokens under `:root:has(.studio)` in `src/styles.css`, with the shared Tailwind tokens mapped onto them:
+  - **Cards on a canvas:** a warm grey canvas (`#f1f0ed`); everything you work on (the screen's content, the editor sheet, the side panel, dialogs) is a white card with a 1px `--st-line` border and 12px corners, no shadow. Menus and popovers float with `--st-shadow-pop`, dialogs with `--st-shadow-dialog`.
+  - **Quiet chrome:** the sidebar (240px, Lucide icons, the active item a white lift) and the editor top bar (52px) sit directly on the canvas.
+  - **One primary action per screen:** the only filled dark button (New page, Publish, Save); secondary buttons are white with a border, toolbar and row actions are ghost buttons. 8px radius, 36px default height.
+  - **Status as a dot plus a word:** live (green), unpublished changes (amber), draft (hollow grey ring), error (red), comments (purple). Badge variants `live` / `changes` / `draft`; the editor bar shows a plain dot and word.
+  - **Roomy forms:** labels 13/500 above 40px fields on an inset fill; focus = blue accent border plus a soft halo.
+  - **Type:** Inter (variable, self-hosted via `@fontsource-variable/inter`, so only Studio screens download it), 14/20 base, weights 400/500/600, sentence case; uppercase only for the 12px sidebar group labels.
+  - **Lists:** 48px rows divided by hairlines; the whole row opens the editor; Settings, Duplicate and Delete sit in a `…` menu.
+  - **Editor:** device sizes as a segmented control (white lift on an inset track); the client's page sits on a white sheet 12px from the canvas edges; the side panel is a 340px card beside it, stacked under the sheet below 768px.
+  - **Motion:** 120ms (hover) / 180ms (menus) / 240ms (dialogs, panel), one ease-out curve; reduced motion keeps only colour and opacity changes.
 - **Scoped to Studio screens only** (`:root:has(.studio)`), and the public site's global element rules exclude the Studio, so neither leaks into the other. The canvas always shows the page exactly as visitors see it.
 
 ### Safety
@@ -899,6 +907,8 @@ Still unchecked in the browser, for when entries return: replacing an image; add
 ## 17. Change Log
 
 Newest first. Each entry: date, what changed, how, and any follow-ups.
+
+- **2026-11-25 · Studio restyle ("Panelled") · Claude** — Cosmetic only; no behaviour or data changes. The Studio's dark theme is replaced by the "Panelled" system from `design.md`: `--st-*` tokens under `:root:has(.studio)` (warm grey canvas, white cards, line colours, text greys, primary, blue accent, status colours, shadows for floating layers only, durations and one ease-out curve), mapped onto the shared tokens. Inter (self-hosted, Studio only) at 14/20. App shell: sidebar on the canvas with Lucide icons, group captions and a white-lift active item; each screen's content on one white card with a title and summary line. Pages list: 48px rows, whole row opens the editor, Settings / Duplicate / Delete in a `…` menu. Buttons (primary / secondary / ghost / danger), 40px fields with an inset fill and accent focus halo, status badges with dots (`live`, `changes`, `draft`), dialogs, popovers, selects and toasts (dark, bottom-centre) restyled. Editor: 52px top bar on the canvas (ghost Back, page switcher with chevron, dot-and-word status, save state, icon segmented device control, ghost Comment and Hide panel, secondary Discard, primary Publish), the page on a white sheet, the side panel as a card (stacked under the sheet on narrow screens). Canvas selection colours now blue (sections) / cyan-blue (elements) / purple (comments); 22px round comment pins; the ↑/↓/+ bar a dark rounded toolbar. Small Tailwind text sizes pinned to 14px / 12px inside the Studio (the project's `text-sm` is 16px for the public site). The public site is untouched. Checked in the browser: Pages and its menu, editor (selection, panel), page settings, Users, Site settings, sign-in, phone width.
 
 - **2026-11-25 · Compatibility contract · Claude** — Docs only. Section 12 gains a Compatibility contract (modelled on WordPress's core updates): what sites build on (`defineSite()`, the `.site-*` classes and design tokens, the content model's field names), and the rules for changing it — never edit platform files in a site repo, add rather than change, deprecate for at least a minor release before removing in a major, expand-then-contract migrations, field renames move content, each site tests its own build and staging, failures stay local. Phase 8 gains deprecation warnings, a section error boundary, staging screenshot comparisons, approved production deploys with a backup, per-site deploy tokens and pull requests once clients review on staging. Decision 8 notes token scope; a lesson on CSS hooks.
 
