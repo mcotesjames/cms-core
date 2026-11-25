@@ -49,7 +49,7 @@ Each site is its own deployment on the MCJames Cloudflare account:
 | R2 bucket | Own media bucket (never a folder in a shared bucket) |
 | Users | Stored in the site's own D1 |
 | Secrets | Own Resend key, own auth secret |
-| Environments | Production Worker + a staging Worker with its own D1 and R2 |
+| Environments | Production Worker + a staging Worker, each with its own D1 and R2 (see Environments and content flow) |
 
 A site's code can only reach its own bindings, so client data is separated by infrastructure, not by filters in code.
 
@@ -79,7 +79,28 @@ A site's code can only reach its own bindings, so client data is separated by in
 - Sign-in method: open decision 1 (leaning email one-time code). Code requests and sign-in attempts are rate-limited per email and per IP.
 
 ### Local development
-- `wrangler dev` with a local D1 database and R2 bucket, seeded from `db/seed.sql` (fixture content only, never client data).
+- `npm run dev` with a local D1 database and R2 bucket (through Wrangler), seeded from `db/seed.sql` (fixture content only, never client data). Local has its own database (`preview_database_id`), never staging's.
+
+### Environments and content flow
+Every site runs in three places, each with its own database and media bucket:
+
+| Environment | What it's for | Content |
+|---|---|---|
+| **Local** | Experimenting and building features | Fixtures, or a copy pulled from production |
+| **Staging** | Previewing new features and designs to the client; rehearsing updates and migrations | Before launch: where the site's content is built. After launch: a copy pulled from production |
+| **Production** | The public site | The real content, edited by the client in its own Studio |
+
+**The rule: code goes up, content comes down.**
+- **Code and schema** move local → staging → production. The same migrations run in the same order everywhere, so the three databases always share one structure.
+- **Content** moves production → staging → local (`content:pull`), so previews and experiments use real content. Once a site is live, nothing copies content *up* over production: the client edits there, and copying staging up would erase their changes.
+- **The one exception is launch:** before a site goes live, its content is built on staging, and `content:launch` copies it into the empty production database once.
+- **Previewing content changes after launch** happens on production itself: every edit is a draft until Publish, and secret preview links (Phase 9) share a draft without publishing it. Staging is only needed to preview *features*.
+
+**What a content copy includes:** site content, pages, entries, records, list items, menus, settings, the `media` table and the media files in R2 (copied object by object, since they live outside the database). **What it never copies:** users, sign-in sessions and accounts (test logins must never reach production, and real accounts never leave it) and, by default, feedback comments (they're about the environment they were left in).
+
+**Sync tools** (Phase 8; `content:launch` is needed for the first site launch in Phase 7):
+- **`content:launch <site>`** — staging → production, once. Refuses if production already has content unless forced, and always exports a backup of production first. Copies the database content (D1 export → import of the content tables) and the media bucket, then clears the edge cache by its content version.
+- **`content:pull <site> --to staging|local`** — production → staging or local. Backs up the target first, replaces its content tables and media, and leaves its users and comments untouched.
 
 ### Email
 - Resend, the site's own sending domain. Used for: sign-in codes or confirmation, approval notices, comment notifications, form submissions.
@@ -697,11 +718,12 @@ Builds the core decided in Phase 5, each through the platform extension points s
 ### Phase 7 — Portfolio (site #1) ☐
 - ☐ `site.config.ts` and designed sections for mcotesjames.com (section 15), using the core features it needs.
 - ☐ Migrate current content verbatim from the WordPress site; redirects from old addresses.
-- ☐ Staging, then production on the custom domain.
+- ☐ Build the content on staging (client preview), then launch: create the production D1, R2 and Worker (`SITE_ENV=production`), copy the content up with `content:launch` (section 2 → Environments and content flow), and point the custom domain at the production Worker.
 - ☐ Track hours per module (to inform per-site pricing).
 
 ### Phase 8 — Setup and operations ☐
 - ☐ New-site script (section 10), platform update script (merge tag, migrate staging, check), launch checklist, offboarding export.
+- ☐ Content sync tools (section 2 → Environments and content flow): `content:launch` (staging → production, once; needed first in Phase 7) and `content:pull` (production → staging or local). Content and media only, never users, sessions or (by default) comments; always back up the target first.
 - ☐ Cron jobs: daily database backup to the MCJames backup bucket; resolved-comment clean-up.
 - ☐ Analytics dashboard in the Studio (if not in the Phase 5 core).
 - ☐ Error monitoring for deployed Workers.
@@ -744,6 +766,7 @@ Still unchecked in the browser, for when entries return: replacing an image; add
 - **Auth library:** Better Auth on D1. **Schema and migrations:** Drizzle.
 - **Media:** images resized in the browser before upload; stable R2 paths.
 - **Interactive embeds:** not in the platform; a site feature.
+- **Environments:** local to experiment, staging to preview features to the client, production for the public; each with its own database and bucket. Code goes up, content comes down; content goes up only once, at launch (`content:launch`). Content copies never include users, sessions or (by default) comments.
 - **Repo model:** one repo per site, created from the platform repo, pulling releases from a `platform` git remote. Site code only in `src/site/` and `migrations/site/`; the config is the only contract.
 - **Multi-value fields:** JSON arrays in the platform (the original build's joined strings are not carried over).
 
@@ -845,6 +868,8 @@ Still unchecked in the browser, for when entries return: replacing an image; add
 ## 17. Change Log
 
 Newest first. Each entry: date, what changed, how, and any follow-ups.
+
+- **2026-11-25 · Environments and content flow · Claude** — Docs only. Section 2 now defines the three environments (local to experiment, staging to preview features to the client, production for the public), the rule "code goes up, content comes down" with launch as the one upward content copy, what a content copy includes and excludes (never users, sessions or, by default, comments), and two sync tools: `content:launch` (staging → empty production, once, with a backup) and `content:pull` (production → staging or local). Added to Phase 7 (launch steps) and Phase 8 (the tools); recorded under Decisions → Made.
 
 - **2026-11-25 · Phase 2: first deployment · Claude** — Staging is live at https://cms-core-staging.mcotesjames-f69.workers.dev: D1 `cms-core-staging` (migrated, fixture seed), R2 `cms-core-staging-media` (R2 enabled in the dashboard), Worker `cms-core-staging` deployed from the build with `wrangler deploy --config .output/server/wrangler.json`. Added `SITE_ENV` (anything but `production` → `robots.txt` blocks everything and every response is `X-Robots-Tag: noindex, nofollow`). Local development keeps its own database (`preview_database_id: "local-dev"`); the existing local data was copied across. Checked on Cloudflare: pages from the staging database, sitemap, robots, edge cache MISS → HIT, Studio closed. New open decision 8 (one Cloudflare account or one per client; Workers Paid for real client sites). Follow-ups: staging has no media yet (uploads need sign-in, Phase 3); the deploy is manual until the Phase 8 scripts.
 
