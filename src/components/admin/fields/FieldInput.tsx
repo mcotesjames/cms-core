@@ -11,6 +11,7 @@ import { LinkTargetEditor, SELECT } from "./LinkTargetEditor";
 import { RichTextEditor } from "./RichTextEditor";
 import {
   attachedFields,
+  asRichText,
   newGroupItem,
   type ChoiceOption,
   type FieldDef,
@@ -138,11 +139,7 @@ export function FieldInput({
       break;
     case "richText":
       control = (
-        <RichTextEditor
-          label={def.label}
-          value={value as RichDoc | null}
-          onChange={(d) => onChange(d)}
-        />
+        <RichTextEditor label={def.label} value={asRichText(value)} onChange={(d) => onChange(d)} />
       );
       break;
     case "image":

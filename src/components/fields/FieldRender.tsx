@@ -26,7 +26,8 @@ function children(n: { content?: RichNode[] }): ReactNode {
 function node(n: RichNode, i: number): ReactNode {
   switch (n.type) {
     case "paragraph":
-      return <p key={i}>{children(n)}</p>;
+      // Empty paragraphs (stray Return presses) would only add gaps on the site.
+      return n.content?.length ? <p key={i}>{children(n)}</p> : null;
     case "heading":
       return n.attrs.level === 3 ? <h3 key={i}>{children(n)}</h3> : <h2 key={i}>{children(n)}</h2>;
     case "bulletList":

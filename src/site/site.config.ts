@@ -42,13 +42,21 @@ export default defineSite({
       repeatable: true,
       fields: [
         { name: "heading", label: "Heading", type: "text" },
-        { name: "text", label: "Text", type: "longText" },
+        { name: "text", label: "Text", type: "richText" },
         { name: "button_label", label: "Button label", type: "text" },
         { name: "button_link", label: "Button links to", type: "link" },
       ],
       defaults: {
         heading: "A callout",
-        text: "A short message with a button.",
+        text: {
+          type: "doc",
+          content: [
+            {
+              type: "paragraph",
+              content: [{ type: "text", text: "A short message with a button." }],
+            },
+          ],
+        },
         button_label: "Find out more",
         button_link: { kind: "page", page: "home" },
       },

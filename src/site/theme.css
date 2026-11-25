@@ -69,7 +69,7 @@
 /* Callout (a site section): a tinted band with a heading, text and a button. */
 .site-callout-inner { padding: clamp(2rem, 5vw, 3.5rem); border-radius: calc(var(--radius) * 3); background: var(--muted); }
 .site-callout h2 { font-size: var(--type-h2); line-height: 1.2; margin: 0 0 .75rem; max-width: var(--measure); }
-.site-callout p { margin: 0 0 1.5rem; max-width: var(--measure); white-space: pre-line; }
+.site-callout-text { margin: 0 0 1.5rem; max-width: var(--measure); }
 .site-callout-button { display: inline-block; padding: .6rem 1.2rem; border-radius: 999px; background: var(--foreground); color: var(--background); text-decoration: none; }
 .site-callout-button:hover { opacity: .85; }
 

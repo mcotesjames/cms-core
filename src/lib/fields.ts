@@ -100,6 +100,17 @@ export function richTextFromPlain(text: string): RichDoc {
   };
 }
 
+/**
+ * A rich text value from whatever is stored: a rich text document as-is, or plain text (from a
+ * field that used to be text) as paragraphs. Lets a field change from text to rich text without
+ * migrating saved content.
+ */
+export function asRichText(value: unknown): RichDoc {
+  if (value && typeof value === "object" && (value as RichDoc).type === "doc")
+    return value as RichDoc;
+  return richTextFromPlain(typeof value === "string" ? value : "");
+}
+
 /** Only safe link addresses survive in rich text: web, mail, phone, site-relative and anchors. */
 export function safeHref(href: unknown): string | null {
   if (typeof href !== "string") return null;

@@ -4,6 +4,7 @@ import {
   fieldDefault,
   isEmptyValue,
   newGroupItem,
+  asRichText,
   richTextFromPlain,
   richTextPlain,
   safeHref,
@@ -112,6 +113,10 @@ describe("field types", () => {
       validateValues([r], { r: { type: "doc", content: [{ type: "script" }] } })["r"],
     ).toBeTruthy();
     expect(richTextPlain(richTextFromPlain("One\n\nTwo"))).toBe("One\nTwo");
+    // A field that used to be plain text still shows its saved text as paragraphs.
+    expect(richTextPlain(asRichText("Old text\n\nSecond"))).toBe("Old text\nSecond");
+    const doc = richTextFromPlain("Kept");
+    expect(asRichText(doc)).toBe(doc);
   });
 
   it("check declarations, so a bad site config fails its build", () => {

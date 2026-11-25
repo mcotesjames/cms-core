@@ -32,6 +32,8 @@ export function RichTextEditor({
         strike: false,
         underline: false,
         dropcursor: false,
+        // No automatic empty paragraph after lists (it would render as an empty gap).
+        trailingNode: false,
         link: {
           openOnClick: false,
           autolink: true,

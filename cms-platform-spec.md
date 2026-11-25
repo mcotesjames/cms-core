@@ -581,7 +581,7 @@ export default defineSite({
 | `reference` | string[] of ids | `to`, `multiple` | picker (once records and entries exist) |
 | `group` | items `[{ id, …fields }]` | `fields` (no nested groups), `min`, `max`, `itemLabel` | list of small forms: add, reorder, remove |
 
-Values are validated from the declaration (`validateValues` / `fieldSchema`, zod); a site component renders rich text with `<RichText>` and links with `<FieldLink>` (`components/fields/FieldRender.tsx`), and empty values are hidden (`isFilled` understands rich text and links). Server-side enforcement arrives with the features that save single things (records, entries, forms); page sections are drafts and publish as edited.
+A field can change from `text` / `longText` to `richText` without migrating content: `asRichText()` reads stored plain text as paragraphs. Values are validated from the declaration (`validateValues` / `fieldSchema`, zod); a site component renders rich text with `<RichText>` and links with `<FieldLink>` (`components/fields/FieldRender.tsx`), and empty values are hidden (`isFilled` understands rich text and links). Server-side enforcement arrives with the features that save single things (records, entries, forms); page sections are drafts and publish as edited.
 
 ---
 
@@ -939,6 +939,8 @@ Still unchecked in the browser, for when entries return: replacing an image; add
 ## 17. Change Log
 
 Newest first. Each entry: date, what changed, how, and any follow-ups.
+
+- **2026-11-25 · Callout text is rich text · Claude** — The fixture Callout's text field is now rich text (bold, italic, links, lists, subheadings), edited in the side panel (rich text isn't typed in place on the canvas). Callouts saved as plain text keep working: `asRichText()` shows stored plain text as paragraphs in the editor and on the site, so changing a field from text to rich text needs no content migration. Rich text editor no longer adds an empty paragraph after lists, and empty paragraphs aren't rendered.
 
 - **2026-11-25 · Phase 6: records · Claude** — Record types in site config (`recordTypes`: label, plural, fields, title field, ordering), checked at load. Migration `0003_records_publishing` adds `published_at` (live content last changed: publish, reorder, delete) and `deleted_at` (deleting hides, never drops). Data layer `src/data/records.ts`: list, save draft (creates new records at the end), publish (validated on the server against the type's fields, problems returned per field), discard (a never-published record is removed), delete, move, where-used, and `getPublishedRecords` for visitors (live data only). Studio: Records sidebar group, a list per type (search, status, ↑ / ↓), a form drawer from the right (autosaved draft, Publish, Discard, Delete with where-used warning). Site: published records load with the site content; `usePublishedRecords` / `useReferencedRecords` for sections; reference fields pick records. Edge cache version includes `max(records.published_at)`. Fixture: Team member records and a Team section (hand-picked, featured only, or how many). 117 tests (5 new). Checked in the browser: creating, publishing, required-field error from the server, reordering, the Team section listing, featured filter, hand-picking; on a built Worker the cache version follows record publishes. Follow-ups: preview card in the drawer; comments on records.
 
