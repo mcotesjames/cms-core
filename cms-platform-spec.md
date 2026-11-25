@@ -612,62 +612,109 @@ Write the standing rules (content ownership, content safety, content kinds, temp
 
 ✅ done · ◐ partly · ☐ to do
 
-Each phase leaves a site that works end to end, so every step can be checked against the one before.
+Each phase leaves a site that works end to end, so every step can be checked against the one before. *Rewritten 2026-11-25 after the skeleton cut: the order now gets a real deployment and real sign-in in place before features are rebuilt, and adds a decision on what the core ships with.*
 
 ### Phase 0 — Fork and tidy ✅
-- ✅ Copy the original codebase into a **new** platform repo, cut off from the original project (its repo, Lovable project, Supabase database and Worker are never touched). Deleted `.env`, `supabase/`, `.lovable/`, `.wrangler/`, the build output, the Lovable migration settings and the original Postgres migrations, and removed the original client's name, logo, symbol, copy, people and addresses.
-- ✅ Fix lint and remove unused packages, so they aren't carried into every site: formatting fixed; 35 unused UI components and 31 unused packages removed; an npm lockfile replaces the builder's private-mirror one. The remaining `any` types and hook-dependency warnings moved to Phase 1 (tracked there).
+- ✅ Copy the original codebase into a **new** platform repo, cut off from the original project (its repo, Lovable project, Supabase database and Worker are never touched); remove its `.env`, Supabase and Lovable files, build output, migrations, name, logo, copy, people and addresses.
+- ✅ Fix formatting and remove unused packages; an npm lockfile replaces the builder's private-mirror one. Remaining lint items are tracked under Phase 1.
 
-### Phase 1 — Data layer on D1 + R2 ◐ (merged with the former Phase 2)
-*Merged on 2026-11-25: the repo has no Supabase project (the only one it ever pointed at is the original client's live database), so wrapping Supabase calls first would have been untestable throwaway work. Building the data layer straight onto local D1 and R2 keeps every step clickable.*
-- ✅ Wrangler config with D1 and R2 bindings; local dev with a local D1 database and R2 bucket (`npm run db:reset` seeds `db/seed.sql`, fixtures only).
-- ✅ Drizzle schema (section 2) and committed SQL migrations; generic `entries`, `records` and `list_items`.
+### Phase 1 — Data layer on D1 + R2 ◐ *(merged with the original Phase 2)*
+*The repo has no Supabase project (the only one it ever pointed at is the original client's live database), so the data layer went straight onto local D1 and R2.*
+- ✅ Wrangler config with D1 and R2 bindings; local dev on a local D1 database and R2 bucket (`npm run db:reset` seeds `db/seed.sql`, fixtures only).
+- ✅ Drizzle schema (section 2) with committed SQL migrations, including the generic `entries`, `records` and `list_items` tables (unused until Phase 6).
 - ✅ `src/data/` with the access middlewares, and the test that fails if a server function bypasses them.
-- ✅ Every area moved onto `src/data/` and clicked through on local D1/R2: public pages and sitemap; sign-in, approval and users; insights (create, draft, publish, settings, duplicate address refused); page editing and publish; list items; records (create, delete, reorder); media upload and library; comments (thread, reply, resolve, open from Feedback); new page creation and publish.
-- ✅ Sign-in placeholder until Phase 3: pick a seeded account in dev only; a built Worker has no signed-in user, so the Studio is closed.
-- ◐ Fix the `any` types and hook-dependency warnings as their files move: after the skeleton cut, 5 `any` types and 9 warnings remain (Studio form and editor code, plus Fast Refresh warnings in UI components).
+- ✅ Everything the skeleton uses runs on `src/data/` and was clicked through on local D1/R2: public pages and sitemap; sign-in placeholder, approval and users; page editing, sections, menus and publish; page creation and settings; media upload and library; comments.
 - ✅ Browser-side image resize; stable R2 media paths (`/media/<key>`).
-- ◐ Sitemap as a server route on the data layer. ☐ Worker rendering with the edge cache, and cache clearing on Publish and Settings saves; robots as a server route; a smoke test of the built Worker under `wrangler dev`.
-- ✅ Deleted `src/integrations/supabase/` and the Supabase package.
-- ☐ Replace the builder's Vite preset (`@lovable.dev/vite-tanstack-config`) and its error-reporting hook (`lib/lovable-error-reporting.ts`) with a plain TanStack Start + Nitro config.
+- ✅ Deleted the Supabase client and package.
+- ☐ Test the built Worker under `wrangler dev` (the production bundle, not the Vite dev server).
+- ☐ Worker rendering with the edge cache, and cache clearing on Publish and Settings saves; `robots.txt` as a server route.
+- ☐ Replace the builder's Vite preset (`@lovable.dev/vite-tanstack-config`) with a plain TanStack Start + Nitro config.
+- ◐ Lint: 5 `any` types and 9 warnings left (Studio form and editor code; Fast Refresh warnings in UI components).
 
-### Phase 2 — (merged into Phase 1)
+### Phase 2 — First deployment ☐
+Proves the stack on Cloudflare itself before anything else is built on it. Done by hand; Phase 8 scripts it.
+- ☐ Create the staging D1 database and R2 bucket; write their IDs into the Worker config.
+- ☐ Apply migrations and seed fixture content on staging.
+- ☐ Deploy the staging Worker; check the public pages, media and sitemap on its address.
+- ☐ Confirm the Studio is closed on staging (no sign-in until Phase 3).
 
 ### Phase 3 — Auth ☐
-- ☐ Better Auth sign-in (open decision 1), rate limiting, roles, approval, Users screen.
-- ☐ Owner and first admin seeded by script.
+Nothing deployed can be edited until this exists.
+- ☐ Better Auth sign-in (open decision 1), rate limiting per email and IP.
+- ☐ Roles in use: editor / admin chosen on approval; owner-only settings; Users screen updated.
+- ☐ Owner and the client's first admin seeded by script; open sign-up switchable per site.
+- ☐ The dev sign-in placeholder removed (or kept for local development only).
 
-### Phase 4 — Split platform and site ☐
-- ☐ Split shared code into `platform/` and the original site-specific code into `site/`; introduce `site.config.ts`, `defineSite()` and the extension points (section 12). The original build's own sections, records and Interactive template are the first test of the boundary.
+### Phase 4 — Split platform and site ◐
+- ✅ The original build's features replaced by a plain skeleton site: homepage, pinned hero, Text and Image sections, plain header and footer (2026-11-25).
+- ☐ Split shared code into `platform/` and site code into `site/`; introduce `site.config.ts`, `defineSite()` and the extension points (section 12).
 - ☐ Confirm TanStack virtual file routes mount `platform/routes` and `site/routes`.
 - ☐ Lint rule: `platform/` never imports from `site/`.
-- ◐ Replace the original site's features with the fixture test site (a custom section, a record type, a template, a bespoke route); CI builds it. *2026-11-25: the original features are gone; the public site is a plain skeleton (hero + Text + Image sections, homepage only). The fixture's custom section, record type, template and bespoke route come with the platform/site split.*
+- ☐ The fixture test site uses every extension point (a custom section, a record type, a template, a bespoke route), built fresh; CI builds it.
 
-### Phase 5 — Portfolio (site #1) ☐
-- ☐ `site.config.ts` and designed sections for mcotesjames.com (section 15).
-- ☐ Form section with Resend.
-- ☐ Migrate current content verbatim from the WordPress site.
+### Phase 5 — Core scope: decide what every site ships with ☐
+A decision phase, no code. Pages alone aren't enough: the core ships with a small set of **content types**, **record types** and **sections** that most client sites need, each one switched on, off or renamed in `site.config.ts` rather than rebuilt per site. The outcome is recorded in section 14 → Made and built in Phase 6.
+
+**Criteria for the core:** needed by most client sites · generic enough to rename without code (labels, paths, fields) · no client-specific design · worth maintaining for every site.
+
+**Candidates to decide** (proposals, not decisions):
+
+| Kind | Candidate | What it is | Notes |
+|---|---|---|---|
+| Content type | **Articles** | News, blog or insights posts with their own page, block editor, author and date | Proven in the original build (restorable from git history, commit `5b54fbe`) |
+| Content type | **Case studies** | Project write-ups with their own page | Could be Articles with a different template, or Projects records with detail pages |
+| Content type | **Events** | Dated entries with a location and an archive of past events | Less common; maybe site-level |
+| Record type | **Team members** | Name, role, photo, bio, links | Very common |
+| Record type | **Testimonials** | Quote, name, role, company, photo | Very common |
+| Record type | **Logos / clients / partners** | Name, logo, link | Common |
+| Record type | **FAQs** | Question, answer, category | Common |
+| Record type | **Projects** | Name, summary, images, services, link | Needed by the portfolio (section 15) |
+| Section | **Content feed** | Latest entries of a content type | Needed with any content type |
+| Section | **Record grid / list** | Records of a type, optional filters | Needed with any record type |
+| Section | **Form** | Contact or enquiry form emailed via Resend | Nearly every site |
+| Section | **Call to action** | Heading, text, button link | Common, small |
+| Section | **Gallery** | Several images in a grid or carousel | Common |
+| Section | **Quote** | A pull quote with attribution | Small; also an Article block |
+| Section | **Video** | Vimeo / YouTube / uploaded, with caption | Common |
+| Section | **Cards** | Items edited inside the section (list items) | Restores the list-item system |
+| Studio | **Analytics dashboard** | Visits, top pages, referrers, countries, devices (Workers Analytics Engine, cookieless, admin-only) | See Phase 8 |
+| Studio | **Redirects** | Old address → new address, for launches and renamed pages | Important when replacing an old site |
+
+Questions to settle alongside: which items are **on by default** vs **available but off**; the **default names and addresses** (e.g. Articles at `/articles`, renamable); whether **Case studies** is its own content type or a template of Articles.
+
+### Phase 6 — Core features ☐
+Builds the core decided in Phase 5, each through the platform extension points so sites can switch them on, off or rename them.
+- ☐ Content types: entries, the visual entry editor and block catalogue (section 6), Settings screens, list screens, public archive and detail routes, sitemap and SEO for entries. The original build's article editor (git history, commit `5b54fbe`) is the starting point.
+- ☐ Records: list with a form drawer, fields from config, option lists, manual or field ordering, record comments, with the draft step and preview cards the original build lacked.
+- ☐ List items inside sections (cards, accordions, positioned items), with drafts.
+- ☐ The sections decided in Phase 5 (at least Content feed, Record grid / list and Form).
+- ☐ Reference handling: links and cards to entries and records hide when the target is unpublished or deleted.
+- ☐ Paste from Google Docs (and Word, Substack) into entries; legacy Markdown/HTML conversion for imported content.
+
+### Phase 7 — Portfolio (site #1) ☐
+- ☐ `site.config.ts` and designed sections for mcotesjames.com (section 15), using the core features it needs.
+- ☐ Migrate current content verbatim from the WordPress site; redirects from old addresses.
+- ☐ Staging, then production on the custom domain.
 - ☐ Track hours per module (to inform per-site pricing).
 
-### Phase 6 — Setup and operations ☐
-- ☐ New-site script, platform update script (merge tag, migrate staging, check), launch checklist, backup cron, comment clean-up cron, offboarding export.
+### Phase 8 — Setup and operations ☐
+- ☐ New-site script (section 10), platform update script (merge tag, migrate staging, check), launch checklist, offboarding export.
+- ☐ Cron jobs: daily database backup to the MCJames backup bucket; resolved-comment clean-up.
+- ☐ Analytics dashboard in the Studio (if not in the Phase 5 core).
+- ☐ Error monitoring for deployed Workers.
 
-### Phase 7 — Gaps carried from the original build ☐
-- ☐ Draft step for records.
-- ☐ Record preview cards and placeholder badges.
-- ☐ Secret preview links for drafts.
-- ◐ Reference handling everywhere (done for menu links only in the original build).
-- ☐ Paste from Word and Substack.
+### Phase 9 — Editor polish and later ☐
+- ☐ Secret preview links for drafts (open decision 6).
 - ☐ No layout shift when the panel opens or closes.
-- ☐ Motion fully paused in the editor (the original build's shader background still animated).
+- ☐ Drag and drop: blocks and sections on the canvas; reordering in record lists.
+- ☐ Revisit open decisions 2–4 once the entry editor is back.
 
-### Phase 8 — Drag and drop ☐ (once the editor is stable)
-- ☐ Drag blocks and sections on the canvas; drag reordering in record lists.
+### Feature inventory
+**In the code now:** shared editor shell (StudioShell) · in-place text · hover outline and ↑ / ↓ / + bar · click to select · panel for the selected thing only · two-level selection colours and flash · draft / Publish / Discard · flexible pages from a section library (Text, Image) · page templates (Standard) · new pages, duplicate any page · editable menus · empty content hidden · feedback comments with exact-spot pins, Alt-click and the Feedback list · page switcher with dots and Cmd/Ctrl+K · shared SEO builder and Settings screens · Studio dark theme · media library on R2 · sign-in placeholder, approval and users.
 
-### Ported feature inventory (built and clicked through in the original build)
-✅ Shared editor shell for entries and pages · in-place text · hover outline and ↑ / ↓ / + bar · click to select · panel for the selected thing only · two-level selection colours and flash · draft / Publish / Update / Discard · Google Docs paste · legacy conversion to blocks · flexible pages from a shared section library · list items on the canvas with drafts and drill-down · click-to-place positioned items · Studio dark theme · tick-box multi-value fields · editable menus · empty content hidden · feedback comments with exact-spot pins, Alt-click, record threads and Feedback list · page switcher with dots and Cmd/Ctrl+K · shared SEO builder and Settings screens · new pages, duplicate any page · page templates (Standard; Interactive stays a site template).
+**Built in the original build, removed in the skeleton, restorable from git history** (last present in commit `5b54fbe`): entry (article) editor with block catalogue, Google Docs paste and legacy conversion · records list with form drawer and tick-box multi-value fields · list items on the canvas with drafts and drill-down · click-to-place positioned items · Interactive section and template (a site feature).
 
-Unchecked in the browser in the original build, checked in the port (2026-11-25, on local D1/R2): publishing and updating an entry; uploading images. Still unchecked: replacing an image; adding an entry block with **+** in the entry editor.
+Still unchecked in the browser, for when entries return: replacing an image; adding an entry block with **+**.
 
 ---
 
@@ -687,7 +734,7 @@ Unchecked in the browser in the original build, checked in the port (2026-11-25,
 - **Accounts:** names required; approval before access; sign-up can be turned off per site.
 - **SEO:** one shared builder, automatic fallbacks, edited on Settings screens only.
 - **Devices:** desktop-only editing; tablet and mobile via the toggle.
-- **Drag and drop:** deferred to Phase 8.
+- **Drag and drop:** deferred to Phase 9.
 - **Infrastructure:** Cloudflare Worker + D1 + R2 per site (plus staging), on one MCJames account; data layer as the only database access; Resend for email.
 - **Rendering:** public pages render on the Worker and are edge-cached; Publish clears the affected URLs. No pre-rendering, rebuilds or deploy hooks.
 - **Access checks:** every server function goes through `studioFn` / `publicFn`; denied by default, enforced by a test.
@@ -699,11 +746,12 @@ Unchecked in the browser in the original build, checked in the port (2026-11-25,
 
 ### Open
 1. **Sign-in method:** email + password (passwords hashed in the Worker), or a one-time code by email (no passwords stored; needs Resend working before anyone can sign in). *Leaning: email code.*
-2. **Body text editing:** body text is written in the side panel rather than typed on the page. Keep it, or move it onto the canvas to match the canvas-first principle?
-3. **Image drop:** dropping an image onto an entry was lost in the original build when the editors were unified. Restore it?
-4. **Long-distance moves:** repeated ↑ to move a block far up a long entry. Acceptable until drag and drop?
+2. **Body text editing:** body text is written in the side panel rather than typed on the page. Keep it, or move it onto the canvas to match the canvas-first principle? *Applies to the entry editor and the Text section; settle when entries return (Phase 6).*
+3. **Image drop:** dropping an image onto an entry was lost in the original build when the editors were unified. Restore it? *Settle in Phase 6.*
+4. **Long-distance moves:** repeated ↑ to move a block far up a long entry or page. Acceptable until drag and drop (Phase 9)?
 5. ~~Repo model~~ — decided (see Made).
-6. **Draft previews before publish:** the Studio canvas is the only preview. With Worker rendering, secret preview links are now cheap (render drafts for a signed token, never cached). Build them with the edge cache (Phase 1), or leave them for Phase 7?
+6. **Draft previews before publish:** the Studio canvas is the only preview. With Worker rendering, secret preview links are now cheap (render drafts for a signed token, never cached). Build them with the edge cache (Phase 1), or leave them for Phase 9?
+7. **Core scope:** which content types, record types, sections and Studio features ship with every site, which are on by default, and their default names and addresses. Candidates and criteria are in section 13 → Phase 5; the outcome moves to Made and is built in Phase 6.
 
 ---
 
@@ -793,6 +841,8 @@ Unchecked in the browser in the original build, checked in the port (2026-11-25,
 ## 17. Change Log
 
 Newest first. Each entry: date, what changed, how, and any follow-ups.
+
+- **2026-11-25 · Roadmap rewritten · Claude** — Docs only. New order: finish Phase 1 (built-Worker test, edge cache, plain Vite config, lint) → Phase 2 First deployment (staging by hand, reusing the merged phase's number) → Phase 3 Auth → Phase 4 platform/site split → **Phase 5 Core scope** (a decision phase: which content types, record types, sections and Studio features ship with every site, with a candidate list and criteria; pages alone aren't enough) → Phase 6 Core features (rebuilding entries, records and list items on the platform, with the original build's code in commit `5b54fbe` as the starting point) → Phase 7 Portfolio → Phase 8 Setup and operations (now including backups, error monitoring and the analytics dashboard) → Phase 9 Editor polish and drag and drop. Stale items from the skeleton cut removed (record and article gaps, the shader motion item, the already-deleted error-reporting hook); the feature inventory now separates what's in the code from what's restorable from git history. Open decisions: 2–4 tied to the entry editor's return, 6 points at Phase 1 / Phase 9, new decision 7 (core scope).
 
 - **2026-11-25 · Skeleton site · Claude** — The original build's public features are removed: insights (routes, article editor and settings, block editor, Google Docs paste and legacy conversion), investments and publications (records screens), pillars / stacking cards / biography hotspots (list items and their drafts), the Interactive section and template, the WebGL background, page transitions, smooth scrolling and letter reveals. The public site is now a plain, neutral skeleton: one built-in page (Homepage) built like every page from a pinned hero (`intro.title` / `intro.summary`) and two section types, Text (heading, body) and Image (image, alt, caption, contained / full width), rendered by one `PageView` for the homepage and created pages. Header (site name, main menu, mobile Menu toggle) and footer (heading, text, menu columns, copyright) are plain; menus lose the "insight" link kind and default to Home + a Contact column. The Studio keeps drafts and publishing, comments, menus, SEO, media, users and page creation; `/admin` opens on Pages; the page switcher lists pages only; comments live on pages only. SEO: the homepage's automatic title is the site name, every page's automatic description its hero intro. The data layer drops the entries, records and list functions (their tables stay in the schema). Stylesheet rewritten: tokens + `.site-*` skeleton rules + the unchanged Studio rules (970 → 300 lines). Removed packages: three, @react-three/fiber, gsap, lenis, video.js, @vimeo/player, react-markdown, rehype-raw. Replaced the leftover favicon, which was the original client's wordmark. Follow-ups: a sample image in the seed; the fixture's custom section, record type, template and bespoke route (Phase 4); the platform features that replace what was removed (content types, records, list items in sections).
 
