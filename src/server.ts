@@ -54,7 +54,13 @@ export default {
       // `vite dev`, where every request renders).
       if (import.meta.env.DEV) return await render();
       const { withEdgeCache } = await import("./data/cache.server");
-      return await withEdgeCache(request, ctx, render);
+      const response = await withEdgeCache(request, ctx, render);
+      // Staging (anything but production) is never indexed, whatever a page's own settings say.
+      const { isProduction } = await import("./data/env.server");
+      if (await isProduction()) return response;
+      const out = new Response(response.body, response);
+      out.headers.set("x-robots-tag", "noindex, nofollow");
+      return out;
     } catch (error) {
       console.error(error);
       return new Response(renderErrorPage(), {

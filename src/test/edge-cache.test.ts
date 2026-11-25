@@ -34,3 +34,9 @@ describe("robots.txt", () => {
     expect(robots).toContain(`Sitemap: ${SITE_URL}/sitemap.xml`);
   });
 });
+
+describe("robots.txt off production", () => {
+  it("blocks everything", () => {
+    expect(buildRobots(false)).toBe("User-agent: *\nDisallow: /\n");
+  });
+});

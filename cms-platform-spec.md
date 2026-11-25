@@ -632,12 +632,14 @@ Each phase leaves a site that works end to end, so every step can be checked aga
 - ✅ Replaced the builder's Vite preset with a plain `vite.config.ts` (TanStack Start, React, Tailwind, tsconfig paths, LightningCSS; Nitro's `cloudflare-module` preset for builds).
 - ✅ Lint clean: no errors or warnings (shadcn `ui/` files exempt from the Fast Refresh rule by design).
 
-### Phase 2 — First deployment ☐
+### Phase 2 — First deployment ✅
 Proves the stack on Cloudflare itself before anything else is built on it. Done by hand; Phase 8 scripts it.
-- ☐ Create the staging D1 database and R2 bucket; write their IDs into the Worker config.
-- ☐ Apply migrations and seed fixture content on staging.
-- ☐ Deploy the staging Worker; check the public pages, media and sitemap on its address.
-- ☐ Confirm the Studio is closed on staging (no sign-in until Phase 3).
+- ✅ Staging D1 database `cms-core-staging` (Western Europe) and R2 bucket `cms-core-staging-media` created in the MCJames account; the database ID is in `wrangler.jsonc`. R2 had to be enabled once in the dashboard (it needs a payment method on file, even within the free allowance).
+- ✅ Migrations applied and fixture content seeded on staging.
+- ✅ Staging Worker `cms-core-staging` deployed: https://cms-core-staging.mcotesjames-f69.workers.dev. Checked: pages render from the staging database, sitemap and robots served, edge cache MISS → HIT in Cloudflare's network, no console errors.
+- ✅ Staging is never indexed: `SITE_ENV` (a Worker variable) is `staging`, so `robots.txt` disallows everything and every response carries `X-Robots-Tag: noindex, nofollow`; only `SITE_ENV=production` lets search engines in.
+- ✅ The Studio is closed on staging (no sign-in until Phase 3).
+- ✅ Local development keeps its own database: `preview_database_id: "local-dev"` in `wrangler.jsonc` separates it from staging's ID.
 
 ### Phase 3 — Auth ☐
 Nothing deployed can be edited until this exists.
@@ -753,6 +755,7 @@ Still unchecked in the browser, for when entries return: replacing an image; add
 5. ~~Repo model~~ — decided (see Made).
 6. **Draft previews before publish:** the Studio canvas is the only preview. With Worker rendering, secret preview links are now cheap (render drafts for a signed token, never cached). Build them with the edge cache (Phase 1), or leave them for Phase 9?
 7. **Core scope:** which content types, record types, sections and Studio features ship with every site, which are on by default, and their default names and addresses. Candidates and criteria are in section 13 → Phase 5; the outcome moves to Made and is built in Phase 6.
+8. **Cloudflare account per client, or one for all?** One MCJames account is simplest (one bill, re-charged in the hosting fee; sites still isolated by their own Worker, D1 and R2) but every site shares the account's free allowances; one account per client gives each its own allowance and makes hand-over clean, at the cost of more admin. Either way, real client sites need **Workers Paid** (about $5/month per account): the free plan's ~10 ms CPU per request and 100,000 requests/day across the account won't carry server-rendered client sites. Decide before the Phase 8 new-site script.
 
 ---
 
@@ -842,6 +845,8 @@ Still unchecked in the browser, for when entries return: replacing an image; add
 ## 17. Change Log
 
 Newest first. Each entry: date, what changed, how, and any follow-ups.
+
+- **2026-11-25 · Phase 2: first deployment · Claude** — Staging is live at https://cms-core-staging.mcotesjames-f69.workers.dev: D1 `cms-core-staging` (migrated, fixture seed), R2 `cms-core-staging-media` (R2 enabled in the dashboard), Worker `cms-core-staging` deployed from the build with `wrangler deploy --config .output/server/wrangler.json`. Added `SITE_ENV` (anything but `production` → `robots.txt` blocks everything and every response is `X-Robots-Tag: noindex, nofollow`). Local development keeps its own database (`preview_database_id: "local-dev"`); the existing local data was copied across. Checked on Cloudflare: pages from the staging database, sitemap, robots, edge cache MISS → HIT, Studio closed. New open decision 8 (one Cloudflare account or one per client; Workers Paid for real client sites). Follow-ups: staging has no media yet (uploads need sign-in, Phase 3); the deploy is manual until the Phase 8 scripts.
 
 - **2026-11-25 · Phase 1 finished · Claude** — Replaced the Lovable Vite preset with a plain `vite.config.ts` (and removed the package). Tested the built Worker under `wrangler dev`: pages, sitemap, robots and media from local D1/R2, Studio closed. Added the edge cache (`src/data/cache.server.ts`, wired in `src/server.ts`): public pages keyed by a content version (`site_content.updated_at`, now written only when live content changes), media by address, Studio / server functions / canvas never cached, browsers always revalidate pages; verified hit → still a hit after a draft save → miss with new content after a publish. The spec's purge-on-publish plan changed to version keys, because the Cache API is per data centre (section 2 → Rendering). `robots.txt` is a server route from `SITE_URL`. Lint clean: the remaining `any` types typed through the page model's `Doc`, hook dependencies made explicit, Studio helpers (`meQuery`, `useSignOut`, `adminHead`) moved from `AdminGate.tsx` to `adminUser.ts`. 79 tests (5 new: cacheable requests, robots). Follow-ups: lazy images take no space until loaded (store image dimensions with Image sections); a real deployment is Phase 2.
 

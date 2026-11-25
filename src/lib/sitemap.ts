@@ -33,8 +33,12 @@ export function buildSitemap(rows: SitemapPageRow[]): string {
   );
 }
 
-/** robots.txt: everything public is crawlable; the Studio and server functions aren't. */
-export function buildRobots(): string {
+/**
+ * robots.txt: on production everything public is crawlable and the Studio and server functions
+ * aren't; anywhere else (staging) nothing is.
+ */
+export function buildRobots(production = true): string {
+  if (!production) return ["User-agent: *", "Disallow: /", ""].join("\n");
   return [
     "User-agent: *",
     "Allow: /",

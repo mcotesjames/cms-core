@@ -1,19 +1,27 @@
-// Cloudflare config for this site's Worker. Each site gets its own D1 database and R2 bucket
-// (spec section 2); the setup script (spec section 10) writes the real IDs per site, never copied
-// from another site. Locally, `npm run dev` uses a local D1 and R2 under .wrangler/state.
+// Cloudflare config for this site's Worker: staging for now (spec Phase 2). Each site and each
+// environment gets its own D1 database and R2 bucket (spec section 2); the setup script (spec
+// section 10) will write the real IDs per site, never copied from another site.
+// Locally, `npm run dev` uses a local D1 and R2 under .wrangler/state.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "cms-core",
+  "name": "cms-core-staging",
   "compatibility_date": "2026-11-16",
   "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    // Anything but "production" keeps the site out of search engines (robots.txt and
+    // X-Robots-Tag: noindex on every response).
+    "SITE_ENV": "staging",
+  },
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "cms-core",
-      // Placeholder until the setup script creates the real database.
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_name": "cms-core-staging",
+      "database_id": "6323973b-7d77-4292-b600-0691ef449f4c",
+      // Local development (`npm run dev`, `--local` commands) keeps its own database under
+      // .wrangler/state, separate from staging.
+      "preview_database_id": "local-dev",
       "migrations_dir": "migrations/platform",
     },
   ],
-  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "cms-core-media" }],
+  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "cms-core-staging-media" }],
 }

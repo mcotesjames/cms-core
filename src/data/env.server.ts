@@ -7,7 +7,12 @@
  */
 import type { D1Database, R2Bucket } from "@cloudflare/workers-types";
 
-export type Bindings = { DB: D1Database; MEDIA: R2Bucket };
+export type Bindings = {
+  DB: D1Database;
+  MEDIA: R2Bucket;
+  /** "production" lets search engines in; anything else (staging, dev) keeps them out. */
+  SITE_ENV?: string;
+};
 
 let devProxy: Promise<{ env: Bindings }> | undefined;
 
@@ -27,4 +32,9 @@ export async function bindings(): Promise<Bindings> {
   const env = (globalThis as { __env__?: Bindings }).__env__;
   if (!env?.DB) throw new Error("The DB binding is missing: check wrangler.jsonc.");
   return env;
+}
+
+/** True only on the production site: everywhere else asks search engines not to index. */
+export async function isProduction(): Promise<boolean> {
+  return (await bindings()).SITE_ENV === "production";
 }
