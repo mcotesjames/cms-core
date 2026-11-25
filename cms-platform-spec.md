@@ -37,7 +37,7 @@ Give each client an editorial, modular CMS that fits their brand. Editors change
 
 ## 2. Platform Architecture ☐
 
-Replaces the original build's stack (Lovable Cloud / Supabase). See `cms-platform-plan.md` for the reasoning and costs.
+Replaces the original build's stack (Lovable Cloud / Supabase).
 
 ### One instance per site
 Each site is its own deployment on the MCJames Cloudflare account:
@@ -612,9 +612,9 @@ Write the standing rules (content ownership, content safety, content kinds, temp
 
 Each phase leaves a site that works end to end, so every step can be checked against the one before.
 
-### Phase 0 — Fork and tidy ◐
+### Phase 0 — Fork and tidy ✅
 - ✅ Copy the original codebase into a **new** platform repo, cut off from the original project (its repo, Lovable project, Supabase database and Worker are never touched). Deleted `.env`, `supabase/`, `.lovable/`, `.wrangler/`, the build output, the Lovable migration settings and the original Postgres migrations, and removed the original client's name, logo, symbol, copy, people and addresses.
-- ◐ Fix lint (Prettier auto-fix, then the `any` types and hook-dependency warnings) and remove unused packages, so they aren't carried into every site. Formatting fixed; 35 unused UI components and 31 unused packages removed; npm lockfile replaces the builder's private-mirror one. The 18 `any` types and 6 hook-dependency warnings are all in Studio code that calls Supabase directly, so they're fixed in Phase 1, where those calls move into `src/data/` and can be clicked through.
+- ✅ Fix lint and remove unused packages, so they aren't carried into every site: formatting fixed; 35 unused UI components and 31 unused packages removed; an npm lockfile replaces the builder's private-mirror one. The remaining `any` types and hook-dependency warnings moved to Phase 1 (tracked there).
 
 ### Phase 1 — Data layer on D1 + R2 ◐ (merged with the former Phase 2)
 *Merged on 2026-11-25: the repo has no Supabase project (the only one it ever pointed at is the original client's live database), so wrapping Supabase calls first would have been untestable throwaway work. Building the data layer straight onto local D1 and R2 keeps every step clickable.*
@@ -645,7 +645,7 @@ Each phase leaves a site that works end to end, so every step can be checked aga
 - ☐ `site.config.ts` and designed sections for mcotesjames.com (section 15).
 - ☐ Form section with Resend.
 - ☐ Migrate current content verbatim from the WordPress site.
-- ☐ Track hours per module (feeds the pricing model in `cms-platform-plan.md`).
+- ☐ Track hours per module (to inform per-site pricing).
 
 ### Phase 6 — Setup and operations ☐
 - ☐ New-site script, platform update script (merge tag, migrate staging, check), launch checklist, backup cron, comment clean-up cron, offboarding export.
@@ -665,7 +665,7 @@ Each phase leaves a site that works end to end, so every step can be checked aga
 ### Ported feature inventory (built and clicked through in the original build)
 ✅ Shared editor shell for entries and pages · in-place text · hover outline and ↑ / ↓ / + bar · click to select · panel for the selected thing only · two-level selection colours and flash · draft / Publish / Update / Discard · Google Docs paste · legacy conversion to blocks · flexible pages from a shared section library · list items on the canvas with drafts and drill-down · click-to-place positioned items · Studio dark theme · tick-box multi-value fields · editable menus · empty content hidden · feedback comments with exact-spot pins, Alt-click, record threads and Feedback list · page switcher with dots and Cmd/Ctrl+K · shared SEO builder and Settings screens · new pages, duplicate any page · page templates (Standard; Interactive stays a site template).
 
-Still unchecked in the browser in the original build (check during the port): publishing and updating an entry; uploading or replacing images; adding an entry block with **+** in the entry editor.
+Unchecked in the browser in the original build, checked in the port (2026-11-25, on local D1/R2): publishing and updating an entry; uploading images. Still unchecked: replacing an image; adding an entry block with **+** in the entry editor.
 
 ---
 
@@ -701,7 +701,7 @@ Still unchecked in the browser in the original build (check during the port): pu
 3. **Image drop:** dropping an image onto an entry was lost in the original build when the editors were unified. Restore it?
 4. **Long-distance moves:** repeated ↑ to move a block far up a long entry. Acceptable until drag and drop?
 5. ~~Repo model~~ — decided (see Made).
-6. **Draft previews before publish:** the Studio canvas is the only preview. With Worker rendering, secret preview links are now cheap (render drafts for a signed token, never cached). Build them in Phase 2, or leave them for Phase 7?
+6. **Draft previews before publish:** the Studio canvas is the only preview. With Worker rendering, secret preview links are now cheap (render drafts for a signed token, never cached). Build them with the edge cache (Phase 1), or leave them for Phase 7?
 
 ---
 
@@ -791,6 +791,8 @@ Still unchecked in the browser in the original build (check during the port): pu
 ## 17. Change Log
 
 Newest first. Each entry: date, what changed, how, and any follow-ups.
+
+- **2026-11-25 · Spec tidy · Claude** — Docs only. Phase 0 marked done (its remaining lint items are tracked once, under Phase 1). The "unchecked in the browser" note updated with what the Phase 1 click-through covered. Open decision 6 now points at Phase 1 / Phase 7 instead of the merged Phase 2. Removed the references to `cms-platform-plan.md`, which isn't in the repo.
 
 - **2026-11-25 · Phase 1: data layer on D1 + R2 (merged with former Phase 2) · Claude** — The site and Studio now run on Cloudflare D1 and R2 through `src/data/`; Supabase is gone. Added `wrangler.jsonc` (D1 `DB`, R2 `MEDIA`), the Drizzle schema (`src/data/schema.ts`: site_content, entries, records, list_items, media, users, comments) with its first migration (`migrations/platform/0000_init.sql`), a fixture seed and `db:*` scripts. Access is denied by default: every server function starts with `asVisitor` / `asEditor` / `asAdmin` / `asOwner` (a test enforces it). Public reads (`content.ts`) return only live columns; Studio modules cover entries, site rows and list publishing (one D1 batch), records, media, comments and users. Components keep their shapes (`shapes.ts` maps generic rows). Sign-in is a dev-only placeholder (pick a seeded account); a built Worker has no signed-in user. Media: browser resize (2400px / 0.82), R2 under `library/…`, served at `/media/<key>` with immutable caching; share images made absolute. Approving a user now sets role `admin` (as every approved account was before). Records are sorted A–Z by name in the Studio (previously Z–A). Checks: type check, 110 tests and the build pass; every area clicked through locally (see roadmap). Follow-ups: the remaining `any` types and hook warnings; Worker rendering with the edge cache; a smoke test of the built Worker; replacing the builder's Vite preset.
 
