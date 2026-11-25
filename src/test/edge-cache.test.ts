@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cacheKind } from "@/data/cache.server";
+import { cacheKind, pageCacheKey } from "@/data/cache.server";
 import { buildRobots } from "@/lib/sitemap";
 import { SITE_URL } from "@/lib/seo";
 
@@ -19,6 +19,16 @@ describe("edge cache", () => {
     for (const path of ["/admin", "/admin/pages", "/_serverFn/abc", "/studio", "/?studio=1"])
       expect(cacheKind(get(path))).toBeNull();
     expect(cacheKind(get("/", "POST"))).toBeNull();
+  });
+
+  it("keys pages by build as well as content, so a deploy never serves the old build's HTML", () => {
+    const url = new URL("https://example.com/about?utm_source=x");
+    const before = pageCacheKey(url, "2026-11-25T10:00:00Z", "abc123");
+    expect(before).toBe(
+      pageCacheKey(new URL("https://example.com/about"), "2026-11-25T10:00:00Z", "abc123"),
+    );
+    expect(pageCacheKey(url, "2026-11-25T10:00:00Z", "def456")).not.toBe(before);
+    expect(pageCacheKey(url, "2026-11-25T11:00:00Z", "abc123")).not.toBe(before);
   });
 
   it("doesn't treat pages that merely start with a private word as private", () => {

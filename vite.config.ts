@@ -15,7 +15,14 @@ import { physical, rootRoute } from "@tanstack/virtual-file-routes";
  * In `vite dev` there is no Worker: the data layer reaches a local D1 and R2 through Wrangler's
  * platform proxy (src/data/env.server.ts), so Nitro is only used for builds.
  */
+/**
+ * Identifies this build: the commit in CI (GITHUB_SHA), otherwise a fresh value per build. The edge
+ * cache keys pages by it, so a deploy never serves HTML that points at the previous build's assets.
+ */
+const BUILD_ID = (process.env["GITHUB_SHA"] ?? `local-${Date.now().toString(36)}`).slice(0, 12);
+
 export default defineConfig(({ command }) => ({
+  define: { __BUILD_ID__: JSON.stringify(BUILD_ID) },
   plugins: [
     tailwindcss(),
     tsConfigPaths({ projects: ["./tsconfig.json"] }),

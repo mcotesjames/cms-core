@@ -9,9 +9,23 @@
  * its next request, with no purge call. The version is one small D1 read, reused for 2 seconds
  * per Worker instance, so a publish is live everywhere within seconds.
  *
+ * Pages are also keyed by the **build** (`__BUILD_ID__`, set in vite.config.ts): a deploy changes
+ * the asset file names the HTML points at, and the old files are gone, so HTML cached by an older
+ * build must never be served after a deploy.
+ *
  * Media files (`/media/<key>`) never change at a key, so they're cached by address alone.
  */
 import { max } from "drizzle-orm";
+
+declare const __BUILD_ID__: string | undefined;
+
+/** This build's id (vite.config.ts `define`); "dev" where it isn't set (tests, `vite dev`). */
+export const BUILD_ID = typeof __BUILD_ID__ === "string" ? __BUILD_ID__ : "dev";
+
+/** The cache key for a page: path (no query string), this build and the content version. */
+export function pageCacheKey(url: URL, version: string, build = BUILD_ID): string {
+  return `${url.origin}${url.pathname}?__b=${encodeURIComponent(build)}&__v=${encodeURIComponent(version)}`;
+}
 
 const VERSION_TTL_MS = 2000;
 let memo: { version: string; at: number } | null = null;
@@ -41,7 +55,8 @@ type Ctx = { waitUntil?: (p: Promise<unknown>) => void } | undefined;
 
 /**
  * Serves a public GET from the edge cache, or renders it and stores it. Pages are stored under
- * their path (query strings ignored: public pages don't read them) plus the content version.
+ * their path (query strings ignored: public pages don't read them), the build and the content
+ * version.
  * Only complete 200 responses without cookies are stored.
  */
 export async function withEdgeCache(
@@ -58,10 +73,11 @@ export async function withEdgeCache(
   const key =
     kind === "media"
       ? new Request(`${url.origin}${url.pathname}`)
-      : new Request(`${url.origin}${url.pathname}?__v=${encodeURIComponent(version)}`);
+      : new Request(pageCacheKey(url, version));
 
   const hit = await cache.match(key);
-  if (hit) return forVisitor(hit, kind, `HIT ${version}`.trim());
+  const label = kind === "page" ? ` ${BUILD_ID} ${version}` : "";
+  if (hit) return forVisitor(hit, kind, `HIT${label}`);
 
   const response = await render();
   const cacheable =
@@ -77,13 +93,13 @@ export async function withEdgeCache(
   if (waitUntil) waitUntil.call(ctx, put);
   else await put;
 
-  return forVisitor(response, kind, `MISS ${version}`.trim());
+  return forVisitor(response, kind, `MISS${label}`);
 }
 
 /**
  * The response as sent to the browser: pages always revalidate with the edge (the stored copy's
  * long lifetime is only for the edge), media keeps its immutable caching. `x-edge-cache` says
- * HIT or MISS, with the content version for pages.
+ * HIT or MISS, with the build and content version for pages.
  */
 function forVisitor(response: Response, kind: Kind, status: string): Response {
   const out = new Response(response.body, response);
